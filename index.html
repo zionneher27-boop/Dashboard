@@ -19,8 +19,8 @@
   --bg0:#000;--bg1:#0d0d0d;--bg2:#161616;--bg3:#1e1e1e;
   --b1:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.11);
   --t1:#ffffff;--t2:#999999;--t3:#555555;
-  --blue:#b8ff00;--green:#b8ff00;--red:#ff3d3d;
-  --amber:#b8ff00;--purple:#b8ff00;--pink:#b8ff00;
+  --blue:#ffffff;--green:#ffffff;--red:#ff3d3d;
+  --amber:#ffffff;--purple:#ffffff;--pink:#ffffff;
   --neon:#b8ff00;
   --sat:env(safe-area-inset-top,20px);
   --sab:env(safe-area-inset-bottom,0px);
@@ -56,7 +56,7 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
 .todo-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1)}
 .todo-item:last-child{border-bottom:none}
 .tchk{width:22px;height:22px;border-radius:4px;border:2px solid var(--b2);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:none;font-size:11px;color:#000;margin-top:1px}
-.tchk.done{background:var(--neon);border-color:var(--neon)}
+.tchk.done{background:var(--t1);border-color:var(--t1)}
 .tbody{flex:1;min-width:0}
 .ttitle{font-size:14px;font-weight:600;line-height:1.3}
 .ttitle.done{opacity:.35;text-decoration:line-through}
@@ -67,23 +67,23 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
 /* BADGES */
 .bdg{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.4px;font-family:'Barlow Condensed',sans-serif}
 .bdg-r{background:rgba(255,61,61,.15);color:var(--red)}
-.bdg-a{background:rgba(184,255,0,.12);color:var(--neon)}
-.bdg-b{background:rgba(184,255,0,.12);color:var(--neon)}
-.bdg-g{background:rgba(184,255,0,.12);color:var(--neon)}
-.bdg-p{background:rgba(184,255,0,.12);color:var(--neon)}
-.bdg-pk{background:rgba(184,255,0,.12);color:var(--neon)}
+.bdg-a{background:rgba(255,255,255,.08);color:var(--t2)}
+.bdg-b{background:rgba(255,255,255,.08);color:var(--t2)}
+.bdg-g{background:rgba(255,255,255,.08);color:var(--t2)}
+.bdg-p{background:rgba(255,255,255,.08);color:var(--t2)}
+.bdg-pk{background:rgba(255,255,255,.08);color:var(--t2)}
 
 /* ICON BUTTONS */
 .ibtn{width:28px;height:28px;border-radius:6px;background:none;border:1px solid var(--b1);color:var(--t3);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
 .ibtn:active{opacity:.5}
-.add-btn{width:100%;padding:12px;background:var(--bg2);border:1px dashed rgba(184,255,0,.2);border-radius:8px;color:var(--neon);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-family:'Barlow',sans-serif;text-transform:uppercase;letter-spacing:.5px}
+.add-btn{width:100%;padding:12px;background:var(--bg2);border:1px dashed var(--b2);border-radius:8px;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;font-family:'Barlow',sans-serif;text-transform:uppercase;letter-spacing:.5px}
 .add-btn:active{background:var(--bg3)}
 
 /* SEG */
 .seg{display:flex;gap:3px;background:var(--bg2);border-radius:8px;padding:3px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .seg::-webkit-scrollbar{display:none}
 .seg-btn{flex:1;padding:6px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--t3);white-space:nowrap;min-width:55px;font-family:'Barlow',sans-serif;text-transform:uppercase;letter-spacing:.4px}
-.seg-btn.active{background:var(--neon);color:#000}
+.seg-btn.active{background:var(--t1);color:#000}
 
 /* RECHNUNGEN */
 .ritem{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1)}
@@ -95,8 +95,8 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
 .rright{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
 .ramt{font-size:13px;font-weight:700}
 .frist{font-size:9px;padding:3px 7px;border-radius:20px;font-weight:600;white-space:nowrap}
-.fok{background:rgba(184,255,0,.12);color:var(--neon)}
-.fwarn{background:rgba(184,255,0,.12);color:var(--neon)}
+.fok{background:rgba(255,255,255,.07);color:var(--t2)}
+.fwarn{background:rgba(255,255,255,.07);color:var(--t2)}
 .furg{background:rgba(255,61,61,.15);color:var(--red)}
 .fdone{background:rgba(100,100,100,.15);color:var(--t3)}
 
@@ -133,9 +133,9 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
 .cal-d{min-height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
 .cal-d:active{background:var(--bg3)}
 .cal-d.other .cal-n{opacity:.25}
-.cal-d.today .cal-n{background:var(--neon);color:#000;border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:900}
-.cal-d.sel{background:rgba(184,255,0,.1);border:1px solid var(--neon)}
-.cal-d.hasev::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--neon);position:absolute;bottom:2px;left:50%;transform:translateX(-50%)}
+.cal-d.today .cal-n{background:var(--t1);color:#000;border-radius:4px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:900}
+.cal-d.sel{background:rgba(255,255,255,.07);border:1px solid var(--b2)}
+.cal-d.hasev::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--t2);position:absolute;bottom:2px;left:50%;transform:translateX(-50%)}
 .cal-n{font-size:12px;font-weight:500}
 .ev-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--b1)}
 .ev-item:last-child{border-bottom:none}
@@ -157,7 +157,7 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
 .frow2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .mbtns{display:flex;gap:8px;margin-top:14px}
 .mbtns button{flex:1;padding:13px;border-radius:8px;font-size:14px;font-family:'Barlow',sans-serif;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:.5px}
-.bsave{background:var(--neon);color:#000;border:none}
+.bsave{background:var(--t1);color:#000;border:none}
 .bsave:active{opacity:.8}
 .bcnl{background:none;border:1px solid var(--b2);color:var(--t2)}
 
@@ -165,7 +165,7 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
 .bnav{position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.97);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-top:1px solid var(--b2);display:flex;justify-content:space-around;padding:8px 0 calc(8px + var(--sab));z-index:500}
 .nb{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;color:var(--t3);cursor:pointer;padding:0 4px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;min-width:50px;position:relative;font-family:'Barlow',sans-serif}
 .nb svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.nb.active{color:var(--neon)}
+.nb.active{color:var(--t1)}
 .nb-dot{min-width:14px;height:14px;border-radius:4px;background:var(--red);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;position:absolute;top:-2px;right:1px;padding:0 3px}
 
 .empty{text-align:center;padding:24px 0;color:var(--t3);font-size:12px}
@@ -202,7 +202,7 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
     </div>
     <div class="hero-stats">
       <div class="hstat">
-        <div class="hstat-v" id="hs-todos" style="color:var(--blue)">0</div>
+        <div class="hstat-v" id="hs-todos" style="color:var(--neon)">0</div>
         <div class="hstat-l">Todos</div>
       </div>
       <div class="hstat">
@@ -210,7 +210,7 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
         <div class="hstat-l">Fällig</div>
       </div>
       <div class="hstat">
-        <div class="hstat-v" id="hs-termine" style="color:var(--purple)">0</div>
+        <div class="hstat-v" id="hs-termine" style="color:var(--neon)">0</div>
         <div class="hstat-l">Termine</div>
       </div>
     </div>
@@ -573,7 +573,7 @@ function mediaTab(t,btn){mediaCurTab=t;document.querySelectorAll('#mseg .seg-btn
 // ── HOME ──────────────────────────────────────────────
 function renderHome(){
   const h=new Date().getHours();
-  document.getElementById('greet').textContent=h<12?'Guten Morgen! ☀️':h<17?'Guten Tag! 👋':'Guten Abend! 🌙';
+  document.getElementById('greet').textContent=h<12?'Guten Morgen':h<17?'Guten Tag':'Guten Abend';
   const open=S.todos.filter(t=>!t.done).length;
   const faellig=S.rech.filter(r=>r.status!=='bezahlt'&&r.due<=TODAY).length;
   const upcoming=S.events.filter(e=>e.date>=TODAY).length;
@@ -584,11 +584,11 @@ function renderHome(){
 
   const dTodos=S.todos.filter(t=>!t.done&&(t.prio==='hoch'||(t.due&&t.due<=TODAY))).sort((a,b)=>({hoch:0,mittel:1,niedrig:2}[a.prio]||1)-({hoch:0,mittel:1,niedrig:2}[b.prio]||1)).slice(0,4);
   const htEl=document.getElementById('home-todos');
-  htEl.innerHTML=dTodos.length?dTodos.map(t=>`<div class="todo-item"><div class="pdot" style="background:${PCOL[t.prio]}"></div><button class="tchk ${t.done?'done':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</button><div class="tbody"><div class="ttitle">${t.title}</div><div class="tmeta"><span class="bdg bdg-p">${t.cat}</span>${t.due?' 📅 '+fd(t.due):''}${t.due&&t.due<TODAY?' <span style="color:var(--red)">⚠️</span>':''}</div></div><button class="ibtn" onclick="openModal('todo','${t.id}')">✏️</button></div>`).join(''):'<div class="empty">✅ Keine dringenden Aufgaben!</div>';
+  htEl.innerHTML=dTodos.length?dTodos.map(t=>`<div class="todo-item"><div class="pdot" style="background:${PCOL[t.prio]}"></div><button class="tchk ${t.done?'done':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</button><div class="tbody"><div class="ttitle">${t.title}</div><div class="tmeta"><span class="bdg bdg-p">${t.cat}</span>${t.due?' '+fd(t.due):''}${t.due&&t.due<TODAY?' <span style="color:var(--red);font-size:9px">ÜBERFÄLLIG</span>':''}</div></div><button class="ibtn" onclick="openModal('todo','${t.id}')">✏️</button></div>`).join(''):'<div class="empty">Keine dringenden Aufgaben.</div>';
 
   const fRech=S.rech.filter(r=>r.status!=='bezahlt'&&dDiff(r.due)<=5).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,3);
   const hrEl=document.getElementById('home-rech');
-  hrEl.innerHTML=fRech.length?fRech.map(r=>{const diff=dDiff(r.due);const fc=diff<0?'furg':diff<=2?'furg':diff<=5?'fwarn':'fok';const ft=diff<0?Math.abs(diff)+'T überfällig':diff===0?'Heute!':'in '+diff+' Tagen';return`<div class="ritem"><div class="ricon">${r.icon||'🧾'}</div><div class="rbody"><div class="rname">${r.name}</div><div class="rdue">${fdd(r.due)}</div></div><div class="rright"><div class="ramt ca">${fmt(r.amt)}</div><div class="frist ${fc}">${ft}</div></div></div>`}).join(''):'<div class="empty">✅ Keine fälligen Rechnungen!</div>';
+  hrEl.innerHTML=fRech.length?fRech.map(r=>{const diff=dDiff(r.due);const fc=diff<0?'furg':diff<=2?'furg':diff<=5?'fwarn':'fok';const ft=diff<0?Math.abs(diff)+'T überfällig':diff===0?'Heute!':'in '+diff+' Tagen';return`<div class="ritem"><div class="rbody"><div class="rname">${r.name}</div><div class="rdue">${fdd(r.due)}</div></div><div class="rright"><div class="ramt ca">${fmt(r.amt)}</div><div class="frist ${fc}">${ft}</div></div></div>`}).join(''):'<div class="empty">Keine fälligen Rechnungen.</div>';
 
   const nEvs=S.events.filter(e=>e.date>=TODAY).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
   const heEl=document.getElementById('home-events');
@@ -604,9 +604,9 @@ function renderHomeFinance(){
   const el=document.getElementById('home-finance');
   if(!el)return;
   el.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b1)"><span style="font-size:13px;color:var(--t2)">💰 Einnahmen/Monat</span><span style="font-size:13px;font-weight:700;color:var(--green)">+${fmt(te)}</span></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b1)"><span style="font-size:13px;color:var(--t2)">💸 Ausgaben/Monat</span><span style="font-size:13px;font-weight:700;color:var(--red)">-${fmt(ta)}</span></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0"><span style="font-size:13px;font-weight:600;color:var(--t1)">✅ Frei verfügbar</span><span style="font-size:15px;font-weight:700;color:${cf>=0?'var(--blue)':'var(--red)'}">≈ ${fmt(cf)}</span></div>`;
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b1)"><span style="font-size:13px;color:var(--t2)">Einnahmen/Monat</span><span style="font-size:13px;font-weight:700;color:var(--t1)">+${fmt(te)}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--b1)"><span style="font-size:13px;color:var(--t2)">Ausgaben/Monat</span><span style="font-size:13px;font-weight:700;color:var(--red)">-${fmt(ta)}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0"><span style="font-size:13px;font-weight:600;color:var(--t1)">Frei verfügbar</span><span style="font-size:15px;font-weight:700;color:${cf>=0?'var(--t1)':'var(--red)'}">≈ ${fmt(cf)}</span></div>`;
 }
 
 // ── TODOS ─────────────────────────────────────────────
@@ -618,7 +618,7 @@ function renderTodos(){
   else if(tFilt==='erledigt')list=list.filter(t=>t.done);
   list.sort((a,b)=>({hoch:0,mittel:1,niedrig:2}[a.prio]||1)-({hoch:0,mittel:1,niedrig:2}[b.prio]||1));
   const el=document.getElementById('todo-list');
-  el.innerHTML=list.length?list.map(t=>`<div class="todo-item"><div class="pdot" style="background:${PCOL[t.prio]||'#4f8ef7'}"></div><button class="tchk ${t.done?'done':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</button><div class="tbody"><div class="ttitle ${t.done?'done':''}">${t.title}</div><div class="tmeta"><span class="bdg bdg-p">${t.cat}</span>${t.due?' 📅 '+fd(t.due):''}${t.due&&t.due<TODAY&&!t.done?' <span style="color:var(--red)">⚠️</span>':''}</div>${t.note?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${t.note}</div>`:''}</div><div class="tactions"><button class="ibtn" onclick="openModal('todo','${t.id}')">✏️</button><button class="ibtn" onclick="del('todos','${t.id}')">🗑</button></div></div>`).join(''):'<div class="empty">Keine Aufgaben hier.</div>';
+  el.innerHTML=list.length?list.map(t=>`<div class="todo-item"><div class="pdot" style="background:${PCOL[t.prio]||'#fff'}"></div><button class="tchk ${t.done?'done':''}" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</button><div class="tbody"><div class="ttitle ${t.done?'done':''}">${t.title}</div><div class="tmeta"><span class="bdg bdg-p">${t.cat}</span>${t.due?' '+fd(t.due):''}${t.due&&t.due<TODAY&&!t.done?' <span style="color:var(--red);font-size:9px">ÜBERFÄLLIG</span>':''}</div>${t.note?`<div style="font-size:11px;color:var(--t3);margin-top:2px">${t.note}</div>`:''}</div><div class="tactions"><button class="ibtn" onclick="openModal('todo','${t.id}')">✏️</button><button class="ibtn" onclick="del('todos','${t.id}')">🗑</button></div></div>`).join(''):'<div class="empty">Keine Aufgaben hier.</div>';
   updateBadges();
 }
 function toggleTodo(id){const t=S.todos.find(x=>x.id===id);if(t){t.done=!t.done;save();renderTodos();if(curTab==='home')renderHome();}}
@@ -633,7 +633,7 @@ function renderRech(){
   const offen=S.rech.filter(r=>r.status!=='bezahlt');
   document.getElementById('rech-sum').textContent=offen.length+' offen · '+fmt(offen.reduce((s,r)=>s+r.amt,0));
   const el=document.getElementById('rech-list');
-  el.innerHTML=list.length?list.map(r=>{const diff=dDiff(r.due),bz=r.status==='bezahlt';let fc,ft;if(bz){fc='fdone';ft='✓ Bezahlt';}else if(diff<0){fc='furg';ft=Math.abs(diff)+'T überfällig';}else if(diff===0){fc='furg';ft='Heute fällig!';}else if(diff<=5){fc='fwarn';ft='in '+diff+' Tagen';}else{fc='fok';ft='in '+diff+' Tagen';}return`<div class="ritem"><div class="ricon">${r.icon||'🧾'}</div><div class="rbody"><div class="rname">${r.name}${r.wdk?' 🔄':''}</div><div class="rdue">${r.cat} · ${fdd(r.due)}</div></div><div class="rright"><div class="ramt ${bz?'':'ca'}">${fmt(r.amt)}</div><div class="frist ${fc}">${ft}</div><div style="display:flex;gap:4px;margin-top:2px">${!bz?`<button class="ibtn" onclick="payR('${r.id}')" style="width:auto;padding:0 7px;border-radius:6px;font-size:10px">✓</button>`:''}
+  el.innerHTML=list.length?list.map(r=>{const diff=dDiff(r.due),bz=r.status==='bezahlt';let fc,ft;if(bz){fc='fdone';ft='Bezahlt';}else if(diff<0){fc='furg';ft=Math.abs(diff)+'T überfällig';}else if(diff===0){fc='furg';ft='Heute fällig!';}else if(diff<=5){fc='fwarn';ft='in '+diff+' Tagen';}else{fc='fok';ft='in '+diff+' Tagen';}return`<div class="ritem"><div class="rbody"><div class="rname">${r.name}${r.wdk?' (wdh.)':''}</div><div class="rdue">${r.cat} · ${fdd(r.due)}</div></div><div class="rright"><div class="ramt ${bz?'':'ca'}">${fmt(r.amt)}</div><div class="frist ${fc}">${ft}</div><div style="display:flex;gap:4px;margin-top:2px">${!bz?`<button class="ibtn" onclick="payR('${r.id}')" style="width:auto;padding:0 7px;border-radius:6px;font-size:10px">✓</button>`:''}
     <button class="ibtn" onclick="openModal('rechnung','${r.id}')">✏️</button><button class="ibtn" onclick="del('rech','${r.id}')">🗑</button></div></div></div>`}).join(''):'<div class="empty">Keine Einträge.</div>';
 
   const sel=document.getElementById('sch-list');
