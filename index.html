@@ -812,6 +812,18 @@ document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('d
 renderHome();
 updateBadges();
 loadFromCloud().then(()=>{renderHome();renderTodos();renderRech();updateBadges();});
+
+// ── REALTIME SYNC ─────────────────────────────────────
+supa.channel('dashboard_realtime')
+  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'dashboard_data',filter:'id=eq.main'},
+    (payload)=>{
+      if(payload.new&&payload.new.data){
+        S=Object.assign(S,payload.new.data);
+        try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
+        renderHome();renderTodos();renderRech();updateBadges();
+      }
+    })
+  .subscribe();
 </script>
 </body>
 </html>
