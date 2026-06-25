@@ -425,6 +425,38 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
   </div>
 </div>
 
+<!-- VOICE BUTTON -->
+<button id="voice-btn" onclick="toggleVoice()" style="position:fixed;top:calc(10px + env(safe-area-inset-top,20px));right:16px;z-index:600;width:38px;height:38px;border-radius:50%;background:var(--bg2);border:1px solid var(--b2);color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s">
+  <svg id="voice-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+</button>
+
+<!-- VOICE MODAL -->
+<div class="mbg" id="voice-mbg" style="align-items:flex-end">
+  <div class="modal" style="border-top:2px solid var(--t1)">
+    <div class="mttl"><span>Spracheingabe</span><button class="mclose" onclick="closeVoice()">✕</button></div>
+    <div id="voice-listening" style="text-align:center;padding:20px 0">
+      <div id="voice-anim" style="width:64px;height:64px;border-radius:50%;background:var(--bg2);border:2px solid var(--b2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </div>
+      <div id="voice-status" style="font-size:13px;color:var(--t2);margin-bottom:8px">Drücke Start und sprich</div>
+      <div id="voice-transcript" style="font-size:15px;font-weight:600;color:var(--t1);min-height:24px;padding:0 8px;line-height:1.4"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+        <button id="voice-start-btn" onclick="startListening()" style="padding:10px 20px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:13px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">Start</button>
+        <button onclick="stopListening()" style="padding:10px 20px;background:var(--bg3);color:var(--t2);border:1px solid var(--b2);border-radius:8px;font-size:13px;font-weight:700;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">Stop</button>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--t3)">Beispiel: "Zahnarzt Termin am 15. Juli 10 Uhr" · "Telekom Rechnung 39 Euro fällig 20. Juli" · "Aufgabe Steuern bis Ende Monat"</div>
+    </div>
+    <div id="voice-result" style="display:none">
+      <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:10px">Erkannt & eingeordnet:</div>
+      <div id="voice-result-content"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="saveVoice()" style="flex:1;padding:12px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">Speichern</button>
+        <button onclick="retryVoice()" style="padding:12px 16px;background:var(--bg2);color:var(--t2);border:1px solid var(--b2);border-radius:8px;font-size:13px;font-weight:700;font-family:Barlow,sans-serif;cursor:pointer">Nochmal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- SCAN MODAL -->
 <div class="mbg" id="scan-mbg" style="align-items:flex-end">
   <div class="modal" style="border-top:2px solid var(--t1)">
@@ -837,6 +869,173 @@ function renderCurrent(){
   else if(curTab==='kal')renderCal();
   else if(curTab==='media')renderMedia();
   updateBadges();
+}
+
+// ── VOICE ─────────────────────────────────────────────
+let recognition=null,voiceParsed=null;
+
+function toggleVoice(){
+  const m=document.getElementById('voice-mbg');
+  if(m.classList.contains('open')){closeVoice();}
+  else{openVoice();}
+}
+function openVoice(){
+  document.getElementById('voice-mbg').classList.add('open');
+  document.getElementById('voice-listening').style.display='block';
+  document.getElementById('voice-result').style.display='none';
+  document.getElementById('voice-transcript').textContent='';
+  document.getElementById('voice-status').textContent='Drücke Start und sprich';
+}
+function closeVoice(){
+  if(recognition)try{recognition.stop();}catch(e){}
+  document.getElementById('voice-mbg').classList.remove('open');
+  setVoiceBtnIdle();
+}
+function retryVoice(){
+  document.getElementById('voice-listening').style.display='block';
+  document.getElementById('voice-result').style.display='none';
+  document.getElementById('voice-transcript').textContent='';
+  document.getElementById('voice-status').textContent='Drücke Start und sprich';
+}
+function setVoiceBtnActive(){
+  const b=document.getElementById('voice-btn');
+  b.style.background='var(--red)';b.style.borderColor='var(--red)';b.style.color='#fff';
+}
+function setVoiceBtnIdle(){
+  const b=document.getElementById('voice-btn');
+  b.style.background='var(--bg2)';b.style.borderColor='var(--b2)';b.style.color='var(--t2)';
+}
+
+function startListening(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert('Spracherkennung wird von diesem Browser nicht unterstützt. Bitte Safari oder Chrome verwenden.');return;}
+  recognition=new SR();
+  recognition.lang='de-DE';
+  recognition.interimResults=true;
+  recognition.maxAlternatives=1;
+  document.getElementById('voice-status').textContent='Höre zu...';
+  document.getElementById('voice-anim').style.border='2px solid var(--t1)';
+  setVoiceBtnActive();
+  recognition.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    document.getElementById('voice-transcript').textContent=final||interim;
+  };
+  recognition.onend=()=>{
+    setVoiceBtnIdle();
+    document.getElementById('voice-anim').style.border='2px solid var(--b2)';
+    const text=document.getElementById('voice-transcript').textContent.trim();
+    if(text.length>2)parseVoice(text);
+    else document.getElementById('voice-status').textContent='Nichts erkannt. Nochmal versuchen.';
+  };
+  recognition.onerror=e=>{
+    setVoiceBtnIdle();
+    document.getElementById('voice-status').textContent='Fehler: '+e.error+'. Bitte Mikrofon erlauben.';
+  };
+  recognition.start();
+}
+function stopListening(){if(recognition)try{recognition.stop();}catch(e){}}
+
+const MONTHS={januar:'01',februar:'02',märz:'03',april:'04',mai:'05',juni:'06',juli:'07',august:'08',september:'09',oktober:'10',november:'11',dezember:'12'};
+function parseDate(text){
+  const low=text.toLowerCase();
+  // "am 15. Juli" or "15 Juli"
+  const m1=low.match(/(\d{1,2})\.?\s*(januar|februar|märz|april|mai|juni|juli|august|september|oktober|november|dezember)/);
+  if(m1){const y=new Date().getFullYear();return`${y}-${MONTHS[m1[2]]}-${m1[1].padStart(2,'0')}`;}
+  // "15.07." or "15.07.2025"
+  const m2=low.match(/(\d{1,2})\.(\d{1,2})\.?(\d{4})?/);
+  if(m2){const y=m2[3]||new Date().getFullYear();return`${y}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`;}
+  // "Ende Monat"
+  if(/ende.*(monat|woche)/i.test(low)){const d=new Date();d.setMonth(d.getMonth()+1,0);return d.toISOString().split('T')[0];}
+  // "morgen"
+  if(/morgen/i.test(low)){const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().split('T')[0];}
+  // "nächste woche"
+  if(/nächste.*(woche)/i.test(low)){const d=new Date();d.setDate(d.getDate()+7);return d.toISOString().split('T')[0];}
+  return TODAY;
+}
+function parseTime(text){
+  const m=text.match(/(\d{1,2})\s*uhr|\bum\s+(\d{1,2})(?::(\d{2}))?/i);
+  if(m){const h=(m[1]||m[2]).padStart(2,'0'),min=(m[3]||'00');return`${h}:${min}`;}
+  return'';
+}
+function parseAmt(text){
+  const m=text.match(/(\d{1,4})[,.](\d{2})\s*euro|(\d{1,4})\s*euro|euro\s*(\d{1,4})/i);
+  if(m)return parseFloat((m[1]&&m[2])?`${m[1]}.${m[2]}`:(m[3]||m[4]));
+  return 0;
+}
+
+function parseVoice(text){
+  const low=text.toLowerCase();
+  let type='notiz',obj={};
+
+  // TERMIN
+  if(/termin|meeting|arzt|zahnarzt|treffen|besprechung|appointment/i.test(low)){
+    type='event';
+    const date=parseDate(text),time=parseTime(text);
+    const title=text.replace(/termin|am \d.*|um \d.*uhr/gi,'').trim()||text;
+    obj={title,date,time,color:'#ffffff',note:''};
+  }
+  // RECHNUNG / FRIST
+  else if(/rechnung|zahlen|fällig|euro|€|bezahlen|überweisung|lastschrift/i.test(low)){
+    type='rechnung';
+    const amt=parseAmt(text),due=parseDate(text);
+    let cat='Sonstiges';
+    if(/telekom|vodafone|o2|internet|telefon/i.test(low))cat='Telefon';
+    else if(/strom|energie/i.test(low))cat='Strom';
+    else if(/versicherung/i.test(low))cat='Versicherung';
+    else if(/miete/i.test(low))cat='Miete';
+    else if(/arzt|krankenk/i.test(low))cat='Gesundheit';
+    const name=text.replace(/rechnung|zahlen|euro.*|€.*|\d+.*uhr/gi,'').trim()||text;
+    obj={name,amt,cat,due,status:'offen',wdk:false};
+  }
+  // TODO
+  else if(/aufgabe|erledigen|todo|nicht vergessen|erinnerung|kaufen|anrufen|schreiben|machen|abgeben/i.test(low)){
+    type='todo';
+    const due=parseDate(text);
+    let prio='mittel';
+    if(/dringend|sofort|wichtig|asap/i.test(low))prio='hoch';
+    else if(/irgendwann|bald|demnächst/i.test(low))prio='niedrig';
+    const title=text.replace(/aufgabe|erinnere mich|erinnerung|nicht vergessen|todo/gi,'').trim()||text;
+    obj={title,prio,cat:'Allgemein',due,note:'',done:false};
+  }
+  // NOTIZ
+  else{
+    type='notiz';
+    obj={title:text.substring(0,40),text,date:TODAY};
+  }
+
+  voiceParsed={type,obj};
+  showVoiceResult(type,obj,text);
+}
+
+const TNAMES={event:'Termin',rechnung:'Rechnung/Frist',todo:'Todo',notiz:'Notiz'};
+function showVoiceResult(type,obj,raw){
+  document.getElementById('voice-listening').style.display='none';
+  document.getElementById('voice-result').style.display='block';
+  const el=document.getElementById('voice-result-content');
+  let html=`<div style="background:var(--bg2);border:1px solid var(--b2);border-radius:10px;padding:14px;margin-bottom:8px">
+    <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;margin-bottom:8px">Eingeordnet als: <span style="color:var(--t1)">${TNAMES[type]}</span></div>`;
+  if(type==='event')html+=`<div style="font-size:14px;font-weight:700;margin-bottom:4px">${obj.title}</div><div style="font-size:12px;color:var(--t3)">${fdd(obj.date)}${obj.time?' · '+obj.time+' Uhr':''}</div>`;
+  else if(type==='rechnung')html+=`<div style="font-size:14px;font-weight:700;margin-bottom:4px">${obj.name}</div><div style="font-size:12px;color:var(--t3)">${obj.amt>0?fmt(obj.amt)+' · ':''} Fällig: ${fdd(obj.due)} · ${obj.cat}</div>`;
+  else if(type==='todo')html+=`<div style="font-size:14px;font-weight:700;margin-bottom:4px">${obj.title}</div><div style="font-size:12px;color:var(--t3)">Priorität: ${obj.prio}${obj.due&&obj.due!==TODAY?' · Bis: '+fdd(obj.due):''}</div>`;
+  else html+=`<div style="font-size:14px;font-weight:700;margin-bottom:4px">${obj.title}</div><div style="font-size:12px;color:var(--t3)">${raw.substring(0,80)}</div>`;
+  html+=`</div><div style="font-size:10px;color:var(--t3);font-style:italic">"${raw}"</div>`;
+  el.innerHTML=html;
+}
+
+function saveVoice(){
+  if(!voiceParsed)return;
+  const {type,obj}=voiceParsed;
+  const key={event:'events',rechnung:'rech',todo:'todos',notiz:'notizen'}[type];
+  S[key].push({id:uid(),...obj});
+  save();
+  closeVoice();
+  renderCurrent();
+  const names={event:'Kalender',rechnung:'Fristen',todo:'Todos',notiz:'Medien'};
+  alert('Gespeichert unter '+names[type]+'!');
 }
 
 // ── SCANNER ───────────────────────────────────────────
