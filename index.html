@@ -941,36 +941,94 @@ function setVoiceBtnIdle(){
 
 function startListening(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){alert('Spracherkennung wird von diesem Browser nicht unterstützt. Bitte Safari oder Chrome verwenden.');return;}
+  if(!SR){
+    document.getElementById('voice-status').textContent='Nicht unterstützt — bitte Safari verwenden';
+    return;
+  }
+  if(recognition){try{recognition.abort();}catch(e){} recognition=null;}
+
   recognition=new SR();
   recognition.lang='de-DE';
-  recognition.interimResults=true;
-  recognition.maxAlternatives=1;
-  document.getElementById('voice-status').textContent='Höre zu...';
+  recognition.interimResults=false; // iOS braucht false
+  recognition.continuous=false;     // iOS: kein continuous mode
+  recognition.maxAlternatives=3;
+
+  let finalText='';
+
+  document.getElementById('voice-status').textContent='Sprich jetzt...';
+  document.getElementById('voice-transcript').textContent='';
+  document.getElementById('voice-anim').style.background='var(--bg3)';
   document.getElementById('voice-anim').style.border='2px solid var(--t1)';
+  document.getElementById('voice-start-btn').textContent='Hört zu...';
+  document.getElementById('voice-start-btn').disabled=true;
   setVoiceBtnActive();
+
+  // Puls-Animation
+  let pulse=0;
+  const pulseInt=setInterval(()=>{
+    pulse=(pulse+1)%4;
+    document.getElementById('voice-status').textContent='Sprich jetzt'+'...'.slice(0,pulse);
+  },400);
+
   recognition.onresult=e=>{
-    let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
+    clearInterval(pulseInt);
+    for(let i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal||e.results[i][0].transcript)
+        finalText+=e.results[i][0].transcript+' ';
     }
-    document.getElementById('voice-transcript').textContent=final||interim;
+    finalText=finalText.trim();
+    document.getElementById('voice-transcript').textContent=finalText;
+    document.getElementById('voice-status').textContent='Erkannt — wird verarbeitet...';
   };
+
+  recognition.onnomatch=()=>{
+    clearInterval(pulseInt);
+    document.getElementById('voice-status').textContent='Nichts verstanden — nochmal versuchen';
+    resetVoiceBtn();
+  };
+
   recognition.onend=()=>{
-    setVoiceBtnIdle();
-    document.getElementById('voice-anim').style.border='2px solid var(--b2)';
-    const text=document.getElementById('voice-transcript').textContent.trim();
-    if(text.length>2)parseVoice(text);
-    else document.getElementById('voice-status').textContent='Nichts erkannt. Nochmal versuchen.';
+    clearInterval(pulseInt);
+    resetVoiceBtn();
+    const text=(finalText||document.getElementById('voice-transcript').textContent).trim();
+    if(text.length>2){
+      parseVoice(text);
+    } else {
+      document.getElementById('voice-status').textContent='Nichts erkannt — nochmal tippen';
+    }
   };
+
   recognition.onerror=e=>{
-    setVoiceBtnIdle();
-    document.getElementById('voice-status').textContent='Fehler: '+e.error+'. Bitte Mikrofon erlauben.';
+    clearInterval(pulseInt);
+    resetVoiceBtn();
+    const msgs={
+      'not-allowed':'Mikrofon-Zugriff verweigert — in Safari-Einstellungen erlauben',
+      'no-speech':'Keine Sprache erkannt — nochmal versuchen',
+      'network':'Kein Internet — Verbindung prüfen',
+      'audio-capture':'Kein Mikrofon gefunden',
+    };
+    document.getElementById('voice-status').textContent=msgs[e.error]||('Fehler: '+e.error);
   };
-  recognition.start();
+
+  try{recognition.start();}
+  catch(e){
+    clearInterval(pulseInt);
+    resetVoiceBtn();
+    document.getElementById('voice-status').textContent='Fehler beim Starten — Seite neu laden';
+  }
 }
-function stopListening(){if(recognition)try{recognition.stop();}catch(e){}}
+
+function resetVoiceBtn(){
+  setVoiceBtnIdle();
+  document.getElementById('voice-anim').style.border='2px solid var(--b2)';
+  document.getElementById('voice-anim').style.background='var(--bg2)';
+  const btn=document.getElementById('voice-start-btn');
+  btn.textContent='Start';btn.disabled=false;
+}
+
+function stopListening(){
+  if(recognition){try{recognition.stop();}catch(e){}}
+}
 
 const MONTHS={januar:'01',februar:'02',märz:'03',april:'04',mai:'05',juni:'06',juli:'07',august:'08',september:'09',oktober:'10',november:'11',dezember:'12'};
 function parseDate(text){
