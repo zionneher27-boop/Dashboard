@@ -188,7 +188,7 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
       <div class="hdr-date" id="hdr-date"></div>
     </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <span id="sync-status" style="font-size:10px;font-weight:600"></span>
+        <span id="sync-status" style="font-size:10px;font-weight:600;cursor:pointer" onclick="forceSync()" title="Tippen zum manuellen Sync"></span>
         <span id="urgent-count" style="font-size:11px;color:var(--red);font-weight:600"></span>
       </div>
   </div>
@@ -510,13 +510,15 @@ let curM=NOW.getMonth(), curY=NOW.getFullYear();
 let syncTimeout=null, chAUS=null, finCurTab='übersicht';
 
 // ── SYNC ──────────────────────────────────────────────
-function showSyncStatus(status){
+let lastCloudUpdate='';
+
+function showSyncStatus(status,msg){
   const el=document.getElementById('sync-status');
   if(!el)return;
-  if(status==='saving'){el.textContent='🔄';el.style.color='var(--amber)';}
-  else if(status==='saved'){el.textContent='✓ Sync';el.style.color='var(--green)';}
-  else if(status==='error'){el.textContent='⚠️ Offline';el.style.color='var(--red)';}
-  else{el.textContent='';}
+  if(status==='saving'){el.textContent='↻ Sync…';el.style.color='var(--t3)';}
+  else if(status==='saved'){el.textContent='✓ Synced';el.style.color='var(--t2)';}
+  else if(status==='error'){el.textContent='⚠️ Kein Sync';el.style.color='var(--red)';}
+  else{el.textContent='↻ Sync';el.style.color='var(--t3)';}
 }
 
 function load(){
@@ -526,17 +528,22 @@ function load(){
 function save(){
   try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
   if(syncTimeout)clearTimeout(syncTimeout);
-  syncTimeout=setTimeout(syncToCloud,1500);
+  syncTimeout=setTimeout(syncToCloud,1200);
 }
 
 async function syncToCloud(){
   showSyncStatus('saving');
   try{
-    const {error}=await supa.from('dashboard_data').upsert({id:'main',data:S,updated_at:new Date().toISOString()});
+    const ts=new Date().toISOString();
+    const {error}=await supa.from('dashboard_data').upsert({id:'main',data:S,updated_at:ts});
     if(error)throw error;
+    lastCloudUpdate=ts;
     showSyncStatus('saved');
     setTimeout(()=>showSyncStatus('idle'),3000);
-  }catch(e){showSyncStatus('error');}
+  }catch(e){
+    showSyncStatus('error');
+    console.error('Sync error:',e);
+  }
 }
 
 async function loadFromCloud(){
@@ -545,13 +552,38 @@ async function loadFromCloud(){
     const {data,error}=await supa.from('dashboard_data').select('data,updated_at').eq('id','main').single();
     if(error)throw error;
     if(data&&data.data&&Object.keys(data.data).length>0){
-      S=Object.assign(S,data.data);
-      try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
+      // Nur überschreiben wenn Cloud neuer ist
+      if(!lastCloudUpdate||data.updated_at>lastCloudUpdate){
+        S=Object.assign({todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[]},data.data);
+        lastCloudUpdate=data.updated_at;
+        try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
+      }
     }
     showSyncStatus('saved');
     setTimeout(()=>showSyncStatus('idle'),2000);
-  }catch(e){showSyncStatus('error');}
+  }catch(e){
+    showSyncStatus('error');
+    console.error('Load error:',e);
+  }
 }
+
+// Polling alle 30 Sekunden als Fallback
+async function pollCloud(){
+  try{
+    const {data,error}=await supa.from('dashboard_data').select('data,updated_at').eq('id','main').single();
+    if(error||!data||!data.data)return;
+    if(data.updated_at&&data.updated_at!==lastCloudUpdate){
+      lastCloudUpdate=data.updated_at;
+      S=Object.assign({todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[]},data.data);
+      try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
+      renderHome();renderTodos();renderRech();updateBadges();
+      showSyncStatus('saved');
+      setTimeout(()=>showSyncStatus('idle'),2000);
+    }
+  }catch(e){}
+}
+
+function forceSync(){loadFromCloud().then(()=>{renderHome();renderTodos();renderRech();renderCurrent();updateBadges();});}
 
 // ── UTILS ─────────────────────────────────────────────
 function fmt(v){return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(v||0)}
@@ -1154,6 +1186,7 @@ document.getElementById('hdr-date').textContent=new Date().toLocaleDateString('d
 renderHome();
 updateBadges();
 loadFromCloud().then(()=>{renderHome();renderTodos();renderRech();updateBadges();});
+setInterval(pollCloud, 30000);
 
 // ── REALTIME SYNC ─────────────────────────────────────
 supa.channel('dashboard_realtime')
