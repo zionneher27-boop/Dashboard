@@ -438,13 +438,17 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
       <div id="voice-anim" style="width:64px;height:64px;border-radius:50%;background:var(--bg2);border:2px solid var(--b2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </div>
-      <div id="voice-status" style="font-size:13px;color:var(--t2);margin-bottom:8px">Tippe Start, sprich, dann Fertig</div>
-      <div id="voice-transcript" style="font-size:15px;font-weight:600;color:var(--t1);min-height:28px;padding:8px;background:var(--bg2);border-radius:8px;margin:0 0 12px;line-height:1.4;text-align:left"></div>
-      <div style="display:flex;gap:8px;justify-content:center">
-        <button id="voice-start-btn" onclick="startListening()" style="flex:1;padding:12px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">🎙 Start</button>
-        <button id="voice-done-btn" onclick="finishListening()" style="flex:1;padding:12px;background:var(--bg3);color:var(--t2);border:1px solid var(--b2);border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">✓ Fertig</button>
+      <div id="voice-status" style="font-size:12px;color:var(--t2);margin-bottom:10px;min-height:18px">Sprechen oder unten eintippen</div>
+      <!-- Mikrofon -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button id="voice-start-btn" onclick="startListening()" style="flex:1;padding:11px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:13px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">🎙 Sprechen</button>
+        <button id="voice-done-btn" onclick="finishListening()" style="flex:1;padding:11px;background:var(--bg3);color:var(--t2);border:1px solid var(--b2);border-radius:8px;font-size:13px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">✓ Fertig</button>
       </div>
-      <div style="margin-top:10px;font-size:11px;color:var(--t3);line-height:1.6">Beispiel: "Zahnarzt Termin 15. Juli 10 Uhr"<br>"Telekom Rechnung 39 Euro fällig 20. Juli"<br>"Aufgabe Steuern bis Ende Monat"</div>
+      <!-- Erkannter Text / editierbar -->
+      <textarea id="voice-transcript" rows="2" placeholder="Erkannter Text erscheint hier — oder direkt eintippen..." style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--b2);border-radius:8px;color:var(--t1);font-size:14px;font-family:Barlow,sans-serif;resize:none;box-sizing:border-box;margin-bottom:10px;outline:none"></textarea>
+      <!-- Direkt senden -->
+      <button onclick="submitVoiceText()" style="width:100%;padding:12px;background:var(--bg2);color:var(--t1);border:1px solid var(--b2);border-radius:8px;font-size:14px;font-weight:700;font-family:Barlow,sans-serif;cursor:pointer">→ Verarbeiten</button>
+      <div style="margin-top:10px;font-size:11px;color:var(--t3);line-height:1.7">"Zahnarzt Termin 15. Juli 10 Uhr"<br>"Telekom Rechnung 39 Euro fällig 20. Juli"<br>"Todo Steuern bis Ende Monat"</div>
     </div>
     <div id="voice-result" style="display:none">
       <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:10px">Erkannt & eingeordnet:</div>
@@ -981,8 +985,8 @@ function startListening(){
     let t='';
     for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript+' ';
     voiceFinalText=t.trim();
-    transEl.textContent=voiceFinalText;
-    statusEl.textContent='Erkannt ✓ — drücke Fertig';
+    transEl.value=voiceFinalText;
+    statusEl.textContent='Erkannt ✓ — drücke Fertig oder bearbeite den Text';
   };
 
   recognition.onerror=e=>{
@@ -1020,11 +1024,20 @@ function finishListening(){
   clearTimeout(voiceTimeout);
   if(recognition){try{recognition.stop();}catch(e){}}
   resetVoiceBtn();
-  const text=(voiceFinalText||document.getElementById('voice-transcript').textContent).trim();
+  const text=(voiceFinalText||document.getElementById('voice-transcript').value||'').trim();
   if(text.length>1){
     parseVoice(text);
   } else {
-    document.getElementById('voice-status').textContent='Nichts erkannt — Start drücken und sprechen';
+    document.getElementById('voice-status').textContent='Nichts erkannt — eintippen oder nochmal sprechen';
+  }
+}
+
+function submitVoiceText(){
+  const text=(document.getElementById('voice-transcript').value||'').trim();
+  if(text.length>1){
+    parseVoice(text);
+  } else {
+    document.getElementById('voice-status').textContent='Bitte erst Text eingeben';
   }
 }
 
