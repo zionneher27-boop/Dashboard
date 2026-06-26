@@ -1449,7 +1449,7 @@ function parseScanResult(rawText){
     </div>
 
     <div style="display:grid;gap:8px;margin-bottom:12px">
-      ${inp('sc-name','Absender / Schuldner',name.substring(0,60))}
+      ${inp('sc-name','Bezeichnung',name.substring(0,60))}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${inp('sc-amt','Betrag (€)',amt||'','number')}
         ${inp('sc-due','Fällig am',due,'date')}
