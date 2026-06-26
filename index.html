@@ -571,7 +571,7 @@ async function loadFromCloud(){
     if(data&&data.data&&Object.keys(data.data).length>0){
       // Nur überschreiben wenn Cloud neuer ist
       if(!lastCloudUpdate||data.updated_at>lastCloudUpdate){
-        S=Object.assign({todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[]},data.data);
+        S=Object.assign({todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[],dok:[]},data.data);
         lastCloudUpdate=data.updated_at;
         try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
       }
@@ -591,7 +591,7 @@ async function pollCloud(){
     if(error||!data||!data.data)return;
     if(data.updated_at&&data.updated_at!==lastCloudUpdate){
       lastCloudUpdate=data.updated_at;
-      S=Object.assign({todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[]},data.data);
+      S=Object.assign({todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[],dok:[]},data.data);
       try{localStorage.setItem(SK,JSON.stringify(S));}catch(e){}
       renderHome();renderTodos();renderRech();updateBadges();
       showSyncStatus('saved');
