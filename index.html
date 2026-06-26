@@ -459,30 +459,31 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
 
 <!-- SCAN MODAL -->
 <div class="mbg" id="scan-mbg" style="align-items:flex-end">
-  <div class="modal" style="border-top:2px solid var(--t1)">
+  <div class="modal" style="border-top:2px solid var(--t1);max-height:95vh">
     <div class="mttl"><span>Dokument scannen</span><button class="mclose" onclick="closeScanner()">✕</button></div>
-    <div id="scan-body">
-      <div id="scan-step-photo">
-        <div style="text-align:center;padding:20px 0">
-          <div style="font-size:48px;margin-bottom:12px">📄</div>
-          <div style="font-size:14px;color:var(--t2);margin-bottom:20px">Foto von Brief oder Rechnung machen</div>
-          <label style="display:inline-flex;align-items:center;gap:8px;padding:14px 24px;background:var(--t1);color:#000;border-radius:8px;font-weight:800;font-size:14px;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Kamera / Foto wählen
-            <input type="file" accept="image/*" capture="environment" id="scan-input" style="display:none" onchange="handleScanFile(this)">
-          </label>
-        </div>
-      </div>
-      <div id="scan-step-loading" style="display:none;text-align:center;padding:30px 0">
-        <div style="font-size:13px;color:var(--t2);margin-bottom:10px" id="scan-status">Text wird erkannt...</div>
-        <div style="width:100%;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden"><div id="scan-bar" style="height:100%;background:var(--t1);width:0%;transition:width .3s;border-radius:2px"></div></div>
-        <img id="scan-preview" style="max-width:100%;border-radius:8px;margin-top:16px;max-height:200px;object-fit:contain" src="" alt="">
-      </div>
-      <div id="scan-step-result" style="display:none">
-        <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:10px">Erkannt:</div>
-        <div id="scan-results"></div>
-        <button class="add-btn" onclick="resetScanner()" style="margin-top:14px">Weiteres Dokument scannen</button>
-      </div>
+
+    <!-- STEP 1: Foto machen -->
+    <div id="scan-step-photo" style="text-align:center;padding:16px 0">
+      <div style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.5">Fotografiere eine Rechnung, einen Brief<br>oder ein Dokument — alles wird automatisch erkannt.</div>
+      <label style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:var(--t1);color:#000;border-radius:8px;font-weight:800;font-size:14px;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Kamera / Foto wählen
+        <input type="file" accept="image/*" capture="environment" id="scan-input" style="display:none" onchange="handleScanFile(this)">
+      </label>
+    </div>
+
+    <!-- STEP 2: Lädt -->
+    <div id="scan-step-loading" style="display:none;text-align:center;padding:20px 0">
+      <img id="scan-preview" style="max-width:100%;border-radius:10px;max-height:180px;object-fit:contain;margin-bottom:14px" src="" alt="">
+      <div style="font-size:13px;font-weight:700;color:var(--t1);margin-bottom:8px" id="scan-status">Text wird erkannt...</div>
+      <div style="width:100%;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:6px"><div id="scan-bar" style="height:100%;background:var(--t1);width:0%;transition:width .4s;border-radius:2px"></div></div>
+      <div style="font-size:11px;color:var(--t3)" id="scan-substatus">Bitte warten...</div>
+    </div>
+
+    <!-- STEP 3: Ergebnis -->
+    <div id="scan-step-result" style="display:none">
+      <div id="scan-results"></div>
+      <button class="add-btn" onclick="resetScanner()" style="margin-top:10px">+ Weiteres Dokument scannen</button>
     </div>
   </div>
 </div>
@@ -731,7 +732,7 @@ function renderRech(){
   const offen=S.rech.filter(r=>r.status!=='bezahlt');
   document.getElementById('rech-sum').textContent=offen.length+' offen · '+fmt(offen.reduce((s,r)=>s+r.amt,0));
   const el=document.getElementById('rech-list');
-  el.innerHTML=list.length?list.map(r=>{const diff=dDiff(r.due),bz=r.status==='bezahlt';let fc,ft;if(bz){fc='fdone';ft='Bezahlt';}else if(diff<0){fc='furg';ft=Math.abs(diff)+'T überfällig';}else if(diff===0){fc='furg';ft='Heute fällig!';}else if(diff<=5){fc='fwarn';ft='in '+diff+' Tagen';}else{fc='fok';ft='in '+diff+' Tagen';}return`<div class="ritem"><div class="rbody"><div class="rname">${r.name}${r.wdk?' (wdh.)':''}</div><div class="rdue">${r.cat} · ${fdd(r.due)}</div></div><div class="rright"><div class="ramt ${bz?'':'ca'}">${fmt(r.amt)}</div><div class="frist ${fc}">${ft}</div><div style="display:flex;gap:4px;margin-top:2px">${!bz?`<button class="ibtn" onclick="payR('${r.id}')" style="width:auto;padding:0 7px;border-radius:6px;font-size:10px">✓</button>`:''}
+  el.innerHTML=list.length?list.map(r=>{const diff=dDiff(r.due),bz=r.status==='bezahlt';let fc,ft;if(bz){fc='fdone';ft='Bezahlt';}else if(diff<0){fc='furg';ft=Math.abs(diff)+'T überfällig';}else if(diff===0){fc='furg';ft='Heute fällig!';}else if(diff<=5){fc='fwarn';ft='in '+diff+' Tagen';}else{fc='fok';ft='in '+diff+' Tagen';}return`<div class="ritem" style="align-items:flex-start;gap:10px">${r.scanImg?`<img src="${r.scanImg}" onclick="viewImg('${r.scanImg}')" style="width:40px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--b2);flex-shrink:0;cursor:pointer;margin-top:2px">`:'<div style="width:4px;height:40px;border-radius:2px;background:var(--b2);flex-shrink:0;margin-top:4px"></div>'}<div class="rbody"><div class="rname">${r.name}${r.rechNr?' · <span style="color:var(--t3);font-size:11px">Nr. '+r.rechNr+'</span>':''}${r.wdk?' (wdh.)':''}</div><div class="rdue">${r.cat} · ${fdd(r.due)}</div></div><div class="rright"><div class="ramt ${bz?'':'ca'}">${fmt(r.amt)}</div><div class="frist ${fc}">${ft}</div><div style="display:flex;gap:4px;margin-top:2px">${!bz?`<button class="ibtn" onclick="payR('${r.id}')" style="width:auto;padding:0 7px;border-radius:6px;font-size:10px">✓</button>`:''}
     <button class="ibtn" onclick="openModal('rechnung','${r.id}')">✏️</button><button class="ibtn" onclick="del('rech','${r.id}')">🗑</button></div></div></div>`}).join(''):'<div class="empty">Keine Einträge.</div>';
 
   const sel=document.getElementById('sch-list');
@@ -1070,112 +1071,199 @@ function saveVoice(){
   alert('Gespeichert unter '+names[type]+'!');
 }
 
-// ── SCANNER ───────────────────────────────────────────
+// ── SCANNER PRO ───────────────────────────────────────
+let scanImageB64='';
+
 function openScanner(){document.getElementById('scan-mbg').classList.add('open');resetScanner();}
-function closeScanner(){document.getElementById('scan-mbg').classList.remove('open');}
+function closeScanner(){document.getElementById('scan-mbg').classList.remove('open');scanImageB64='';}
 function resetScanner(){
   document.getElementById('scan-step-photo').style.display='block';
   document.getElementById('scan-step-loading').style.display='none';
   document.getElementById('scan-step-result').style.display='none';
   document.getElementById('scan-input').value='';
+  scanImageB64='';
+}
+
+function compressImage(file,maxW,quality){
+  return new Promise(resolve=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const scale=Math.min(1,maxW/img.width);
+      const c=document.createElement('canvas');
+      c.width=img.width*scale; c.height=img.height*scale;
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      resolve(c.toDataURL('image/jpeg',quality));
+      URL.revokeObjectURL(url);
+    };
+    img.src=url;
+  });
 }
 
 async function handleScanFile(input){
   if(!input.files||!input.files[0])return;
   const file=input.files[0];
-  const url=URL.createObjectURL(file);
-  document.getElementById('scan-preview').src=url;
   document.getElementById('scan-step-photo').style.display='none';
   document.getElementById('scan-step-loading').style.display='block';
-  document.getElementById('scan-bar').style.width='0%';
+  document.getElementById('scan-bar').style.width='5%';
+  document.getElementById('scan-status').textContent='Bild wird verarbeitet...';
+  document.getElementById('scan-substatus').textContent='';
+
+  // Vorschau & komprimiertes Bild speichern
+  const b64full=await compressImage(file,1200,0.85);
+  const b64thumb=await compressImage(file,600,0.7);
+  scanImageB64=b64full;
+  document.getElementById('scan-preview').src=b64thumb;
+
   document.getElementById('scan-status').textContent='Text wird erkannt...';
+  document.getElementById('scan-bar').style.width='15%';
 
   try{
     const result=await Tesseract.recognize(file,'deu',{
       logger:m=>{
         if(m.status==='recognizing text'){
-          document.getElementById('scan-bar').style.width=Math.round(m.progress*100)+'%';
+          const p=15+Math.round(m.progress*80);
+          document.getElementById('scan-bar').style.width=p+'%';
+          document.getElementById('scan-substatus').textContent=Math.round(m.progress*100)+'% gelesen';
+        } else {
+          document.getElementById('scan-substatus').textContent=m.status;
         }
       }
     });
-    const text=result.data.text;
     document.getElementById('scan-bar').style.width='100%';
-    document.getElementById('scan-status').textContent='Analyse abgeschlossen';
-    setTimeout(()=>parseScanResult(text),400);
+    document.getElementById('scan-status').textContent='Analyse läuft...';
+    document.getElementById('scan-substatus').textContent='Daten werden extrahiert';
+    setTimeout(()=>parseScanResult(result.data.text),500);
   }catch(e){
-    document.getElementById('scan-status').textContent='Fehler beim Erkennen. Bitte nochmal versuchen.';
+    document.getElementById('scan-status').textContent='Fehler — bitte nochmal versuchen';
+    document.getElementById('scan-substatus').textContent=e.message||'';
   }
+}
+
+function extractBetrag(text){
+  // Priorität: Schlüsselwörter für Gesamtbetrag
+  const patterns=[
+    /(?:Gesamtbetrag|Rechnungsbetrag|Zahlbetrag|Endbetrag|Gesamt|Total|Betrag|zu zahlen|fällig)[^\d€]*(\d{1,5}[.,]\d{2})\s*€?/i,
+    /€\s*(\d{1,5}[.,]\d{2})/,
+    /(\d{1,5}[.,]\d{2})\s*€/,
+  ];
+  for(const p of patterns){
+    const m=text.match(p);
+    if(m){const v=parseFloat(m[1].replace(',','.'));if(v>0&&v<99999)return v;}
+  }
+  return 0;
+}
+
+function extractDatum(text){
+  // Fälligkeitsdatum Priorität
+  const fPat=[
+    /(?:fällig|Zahlungsziel|Zahlen bis|bitte bis|bis spätestens|bis zum)[^\d]*(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/i,
+    /(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})/,
+    /(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2})/,
+  ];
+  for(const p of fPat){
+    const m=text.match(p);
+    if(m){
+      const d=m[1].padStart(2,'0'),mo=m[2].padStart(2,'0');
+      const y=m[3].length===2?'20'+m[3]:m[3];
+      if(parseInt(mo)>=1&&parseInt(mo)<=12&&parseInt(d)>=1&&parseInt(d)<=31)
+        return`${y}-${mo}-${d}`;
+    }
+  }
+  return '';
+}
+
+function extractAbsender(text){
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+  const skip=/^(datum|betrag|seite|iban|bic|rechnung|nr\.|re-|konto|von|an|str\.|str |straße|plz|\d)/i;
+  // Erste sinnvolle Zeile die kein Datum/Zahl ist
+  for(const l of lines.slice(0,15)){
+    if(!skip.test(l)&&l.length>4&&l.length<60&&!/^\d{4,}/.test(l))return l;
+  }
+  return lines[0]||'Unbekannt';
+}
+
+function extractRechNr(text){
+  const m=text.match(/(?:Rechnung(?:s)?(?:nummer|nr\.?|nummer)?|RE-?|Invoice\s*(?:No\.?|Nr\.?))\s*[:\-#]?\s*([A-Z0-9\-\/]{3,20})/i);
+  return m?m[1].trim():'';
+}
+
+function extractKat(text){
+  const t=text.toLowerCase();
+  if(/strom|energie|eon|enewa|vattenfall|e\.on/i.test(t))return'Strom';
+  if(/gas|heizung|stadtwerk/i.test(t))return'Gas';
+  if(/telekom|vodafone|o2|1&1|internet|mobilfunk|telefon|magenta/i.test(t))return'Telefon';
+  if(/krankenkasse|krankenversicherung|aok|techniker|tk |barmer|dak|ikk/i.test(t))return'Krankenversicherung';
+  if(/versicherung|allianz|huk|axa|generali|zurich|signal|ergo/i.test(t))return'Versicherung';
+  if(/miete|hausverwaltung|nebenkosten|wohnung/i.test(t))return'Miete';
+  if(/finanzamt|steuer|elster/i.test(t))return'Steuern';
+  if(/mahnung|forderung|inkasso/i.test(t))return'Mahnung';
+  if(/wasser|abwasser/i.test(t))return'Wasser';
+  if(/müll|abfall|entsorgung/i.test(t))return'Abfall';
+  if(/kfz|auto|fahrzeug|kfz-steuer/i.test(t))return'KFZ';
+  if(/arzt|zahnarzt|apotheke|klinik|krankenhaus/i.test(t))return'Gesundheit';
+  return'Sonstiges';
+}
+
+function inp(id,label,val,type='text'){
+  return`<div><div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">${label}</div>
+    <input id="${id}" type="${type}" value="${val}" style="width:100%;padding:9px 11px;background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:Barlow,sans-serif;outline:none"></div>`;
 }
 
 function parseScanResult(text){
   document.getElementById('scan-step-loading').style.display='none';
   document.getElementById('scan-step-result').style.display='block';
 
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+  const name=extractAbsender(text);
+  const amt=extractBetrag(text);
+  const due=extractDatum(text);
+  const cat=extractKat(text);
+  const rechNr=extractRechNr(text);
 
-  // Betrag erkennen
-  const amtMatch=text.match(/(\d{1,4}[.,]\d{2})\s*€|€\s*(\d{1,4}[.,]\d{2})/);
-  const amt=amtMatch?(parseFloat((amtMatch[1]||amtMatch[2]).replace(',','.'))||0):0;
-
-  // Datum erkennen
-  const dateMatch=text.match(/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/);
-  let due='';
-  if(dateMatch){
-    const d=dateMatch[1].padStart(2,'0'),m=dateMatch[2].padStart(2,'0');
-    const y=dateMatch[3].length===2?'20'+dateMatch[3]:dateMatch[3];
-    due=`${y}-${m}-${d}`;
-  }
-
-  // Name/Absender (erste sinnvolle Zeile)
-  const name=lines.find(l=>l.length>4&&!/^\d/.test(l)&&!/^(Datum|Betrag|Seite|IBAN|BIC)/i.test(l))||'Unbekannt';
-
-  // Kategorie raten
-  const low=text.toLowerCase();
-  let cat='Sonstiges';
-  if(/strom|energie|eon|enewa|vattenfall/i.test(low))cat='Strom';
-  else if(/gas|heiz/i.test(low))cat='Gas';
-  else if(/telekom|vodafone|o2|internet|telefon|mobilfunk/i.test(low))cat='Telefon';
-  else if(/krankenkasse|krankenversicherung|aok|tk |barmer/i.test(low))cat='Krankenversicherung';
-  else if(/versicherung|allianz|huk|axa/i.test(low))cat='Versicherung';
-  else if(/miete|hausverwaltung/i.test(low))cat='Miete';
-  else if(/finanzamt|steuer/i.test(low))cat='Steuern';
-  else if(/mahnung|forderung/i.test(low))cat='Mahnung';
-
-  const hasAmt=amt>0;
   const el=document.getElementById('scan-results');
   el.innerHTML=`
-    <div style="background:var(--bg2);border-radius:10px;padding:14px;margin-bottom:10px;border:1px solid var(--b2)">
-      <div style="font-size:12px;color:var(--t3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;font-weight:700">Als Rechnung/Frist speichern</div>
-      <div style="display:grid;gap:8px">
-        <div><label style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Name</label>
-          <input class="frow input" id="sc-name" value="${name.substring(0,40)}" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:Barlow,sans-serif;margin-top:3px"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><label style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Betrag (€)</label>
-            <input class="frow input" id="sc-amt" type="number" value="${amt||''}" placeholder="0.00" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:Barlow,sans-serif;margin-top:3px"></div>
-          <div><label style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Fällig am</label>
-            <input class="frow input" id="sc-due" type="date" value="${due}" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:Barlow,sans-serif;margin-top:3px"></div>
-        </div>
-        <div><label style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Kategorie</label>
-          <input id="sc-cat" value="${cat}" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:Barlow,sans-serif;margin-top:3px"></div>
+    <!-- Vorschau -->
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
+      <img src="${scanImageB64}" style="width:72px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--b2);flex-shrink:0;cursor:pointer" onclick="viewImg('${scanImageB64}')">
+      <div style="font-size:11px;color:var(--t3);line-height:1.6">
+        <div style="color:var(--t2);font-weight:700;font-size:12px;margin-bottom:4px">Automatisch erkannt</div>
+        ${amt>0?`<div>Betrag: <b style="color:var(--t1)">${fmt(amt)}</b></div>`:''}
+        ${due?`<div>Fällig: <b style="color:var(--t1)">${fdd(due)}</b></div>`:''}
+        ${rechNr?`<div>Nr.: <b style="color:var(--t1)">${rechNr}</b></div>`:''}
+        <div>Kat.: <b style="color:var(--t1)">${cat}</b></div>
       </div>
-      <button onclick="saveScan()" style="width:100%;margin-top:12px;padding:12px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">Speichern</button>
     </div>
-    <details style="margin-bottom:8px"><summary style="font-size:11px;color:var(--t3);cursor:pointer;padding:4px 0">Erkannter Rohtext anzeigen</summary>
-      <div style="font-size:11px;color:var(--t3);background:var(--bg2);padding:10px;border-radius:8px;margin-top:6px;white-space:pre-wrap;max-height:120px;overflow-y:auto">${text.substring(0,600)}</div>
+
+    <!-- Felder -->
+    <div style="display:grid;gap:8px;margin-bottom:12px">
+      ${inp('sc-name','Absender / Name',name.replace(/"/g,'&quot;').substring(0,50))}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${inp('sc-amt','Betrag (€)',amt||'','number')}
+        ${inp('sc-due','Fällig am',due,'date')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${inp('sc-cat','Kategorie',cat)}
+        ${inp('sc-rechnr','Rechnungs-Nr.',rechNr)}
+      </div>
+    </div>
+
+    <button onclick="saveScan()" style="width:100%;padding:13px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer;letter-spacing:.5px">In Fristen speichern</button>
+
+    <details style="margin-top:10px"><summary style="font-size:11px;color:var(--t3);cursor:pointer">Erkannter Rohtext</summary>
+      <div style="font-size:10px;color:var(--t3);background:var(--bg2);padding:10px;border-radius:8px;margin-top:6px;white-space:pre-wrap;max-height:100px;overflow-y:auto;line-height:1.5">${text.replace(/</g,'&lt;').substring(0,800)}</div>
     </details>`;
 }
 
 function saveScan(){
-  const name=document.getElementById('sc-name').value.trim();
-  if(!name)return;
+  const name=document.getElementById('sc-name').value.trim()||'Unbekannt';
   const amt=parseFloat(document.getElementById('sc-amt').value)||0;
   const due=document.getElementById('sc-due').value||TODAY;
   const cat=document.getElementById('sc-cat').value||'Sonstiges';
-  S.rech.push({id:uid(),name,amt,cat,due,status:'offen',wdk:false});
+  const rechNr=document.getElementById('sc-rechnr').value.trim();
+  S.rech.push({id:uid(),name,amt,cat,due,status:'offen',wdk:false,rechNr,scanImg:scanImageB64});
   save();
   closeScanner();
+  goTab('rech',document.getElementById('nb-rech'));
   renderRech();
-  alert('Gespeichert unter Fristen!');
 }
 
 // ── INIT ──────────────────────────────────────────────
