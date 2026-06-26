@@ -920,8 +920,9 @@ function openVoice(){
   document.getElementById('voice-mbg').classList.add('open');
   document.getElementById('voice-listening').style.display='block';
   document.getElementById('voice-result').style.display='none';
-  document.getElementById('voice-transcript').textContent='';
-  document.getElementById('voice-status').textContent='Drücke Start und sprich';
+  document.getElementById('voice-transcript').value='';
+  document.getElementById('voice-status').textContent='Sprechen oder eintippen';
+  voiceFinalText='';
 }
 function closeVoice(){
   if(recognition)try{recognition.stop();}catch(e){}
@@ -1022,20 +1023,24 @@ function startListening(){
 function finishListening(){
   clearInterval(voicePulseInt);
   clearTimeout(voiceTimeout);
-  if(recognition){try{recognition.stop();}catch(e){}}
+  // Nicht recognition.stop() — das triggert onend nochmal und bringt alles durcheinander
+  recognition=null;
   resetVoiceBtn();
   const text=(voiceFinalText||document.getElementById('voice-transcript').value||'').trim();
   if(text.length>1){
-    parseVoice(text);
+    try{parseVoice(text);}catch(e){document.getElementById('voice-status').textContent='Fehler: '+e.message;}
   } else {
-    document.getElementById('voice-status').textContent='Nichts erkannt — eintippen oder nochmal sprechen';
+    document.getElementById('voice-status').textContent='Nichts erkannt — bitte eintippen';
   }
 }
 
 function submitVoiceText(){
+  clearInterval(voicePulseInt);
+  clearTimeout(voiceTimeout);
+  recognition=null;
   const text=(document.getElementById('voice-transcript').value||'').trim();
   if(text.length>1){
-    parseVoice(text);
+    try{parseVoice(text);}catch(e){document.getElementById('voice-status').textContent='Fehler: '+e.message;}
   } else {
     document.getElementById('voice-status').textContent='Bitte erst Text eingeben';
   }
