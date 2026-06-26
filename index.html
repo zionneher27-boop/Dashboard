@@ -388,6 +388,15 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
   </div>
 </div>
 
+<!-- UNTERLAGEN SECTION -->
+<div id="sec-dok" class="sec">
+  <div class="card">
+    <div class="card-ttl">Unterlagen</div>
+    <div id="dok-list"></div>
+  </div>
+  <button class="add-btn" onclick="openScanner()">＋ Dokument scannen</button>
+</div>
+
 <!-- BOTTOM NAV -->
 <nav class="bnav">
   <button class="nb active" id="nb-home" onclick="goTab('home',this)">
@@ -409,6 +418,9 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
   </button>
   <button class="nb" id="nb-media" onclick="goTab('media',this)">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Medien
+  </button>
+  <button class="nb" id="nb-dok" onclick="goTab('dok',this)">
+    <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Unterlagen
   </button>
   <button class="nb" id="nb-scan" onclick="openScanner()">
     <svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>Scannen
@@ -509,7 +521,7 @@ const SK = 'mylife_v2';
 const NOW = new Date(); NOW.setHours(0,0,0,0);
 function ds(d){return d.toISOString().split('T')[0]}
 const TODAY = ds(NOW);
-let S = {todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[]};
+let S = {todos:[],events:[],rech:[],sch:[],notizen:[],media:[],ein:[],aus:[],spa:[],dok:[]};
 let curTab='home', tFilt='offen', rFilt='alle', calSel=TODAY, mediaCurTab='bilder';
 let curM=NOW.getMonth(), curY=NOW.getFullYear();
 let syncTimeout=null, chAUS=null, finCurTab='übersicht';
@@ -668,6 +680,7 @@ function goTab(id,btn){
   else if(id==='fin')renderFin();
   else if(id==='kal')renderCal();
   else if(id==='media')renderMedia();
+  else if(id==='dok')renderDok();
 }
 function tFilter(f,btn){tFilt=f;document.querySelectorAll('#tseg .seg-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderTodos()}
 function rFilter(f,btn){rFilt=f;document.querySelectorAll('#rseg .seg-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderRech()}
@@ -1447,7 +1460,20 @@ function parseScanResult(rawText){
       </div>
     </div>
 
-    <button onclick="saveScan()" style="width:100%;padding:13px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer;letter-spacing:.5px">In Fristen speichern</button>
+    <!-- Ablageort Wählen -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ablageort wählen</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="scan-dest-grid">
+        ${[['rech','Fristen','📄'],['todos','Todos','✓'],['fin','Finanzen','€'],['kal','Kalender','📅'],['media','Medien','🖼'],['notizen','Notizen','📝'],['dok','Unterlagen','🗂']].map(([k,label,icon])=>`
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border:1.5px solid var(--b2);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s" id="dest-wrap-${k}" onclick="toggleDest('${k}')">
+          <input type="checkbox" id="dest-${k}" style="display:none">
+          <span id="dest-check-${k}" style="width:18px;height:18px;border:2px solid var(--t3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px"></span>
+          <span>${icon} ${label}</span>
+        </label>`).join('')}
+      </div>
+    </div>
+
+    <button onclick="saveScan()" style="width:100%;padding:13px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer;letter-spacing:.5px">Speichern</button>
 
     <details style="margin-top:10px">
       <summary style="font-size:11px;color:var(--t3);cursor:pointer;padding:4px 0">Erkannter Rohtext (${wordCount} Wörter)</summary>
@@ -1455,17 +1481,80 @@ function parseScanResult(rawText){
     </details>`;
 }
 
+function toggleDest(key){
+  const cb=document.getElementById('dest-'+key);
+  const wrap=document.getElementById('dest-wrap-'+key);
+  const chk=document.getElementById('dest-check-'+key);
+  cb.checked=!cb.checked;
+  if(cb.checked){
+    wrap.style.borderColor='var(--t1)';
+    wrap.style.background='var(--bg3)';
+    chk.style.background='var(--t1)';
+    chk.style.borderColor='var(--t1)';
+    chk.textContent='✓';
+    chk.style.color='#000';
+  } else {
+    wrap.style.borderColor='var(--b2)';
+    wrap.style.background='var(--bg2)';
+    chk.style.background='';
+    chk.style.borderColor='var(--t3)';
+    chk.textContent='';
+  }
+}
+
 function saveScan(){
+  const dests=['rech','todos','fin','kal','media','notizen','dok'].filter(k=>document.getElementById('dest-'+k)?.checked);
+  if(!dests.length){alert('Bitte mindestens einen Ablageort auswählen.');return;}
+
   const name=document.getElementById('sc-name').value.trim()||'Unbekannt';
   const amt=parseFloat(document.getElementById('sc-amt').value)||0;
   const due=document.getElementById('sc-due').value||TODAY;
   const cat=document.getElementById('sc-cat').value||'Sonstiges';
   const rechNr=document.getElementById('sc-rechnr').value.trim();
-  S.rech.push({id:uid(),name,amt,cat,due,status:'offen',wdk:false,rechNr,scanImg:scanImageB64});
+  const scanId=uid();
+
+  // Basis-Eintrag für Unterlagen (immer mit Bild)
+  const dokEntry={id:scanId,name,amt,cat,due,rechNr,scanImg:scanImageB64,savedAt:TODAY};
+
+  if(dests.includes('rech'))
+    S.rech.push({id:uid(),name,amt,cat,due,status:'offen',wdk:false,rechNr,scanImg:scanImageB64});
+  if(dests.includes('todos'))
+    S.todos.push({id:uid(),title:name+(amt?` – ${fmt(amt)}`:''),prio:'mittel',cat:'Allgemein',due,note:'Gescanntes Dokument',done:false});
+  if(dests.includes('fin'))
+    S.aus.push({id:uid(),name,amt,cat,wdk:false});
+  if(dests.includes('kal'))
+    S.events.push({id:uid(),title:name+(due?` (fällig ${fdd(due)})`:''),date:due||TODAY,time:'',color:'#ffffff',note:''});
+  if(dests.includes('media'))
+    S.media.push({id:uid(),name,img:scanImageB64,date:TODAY});
+  if(dests.includes('notizen'))
+    S.notizen.push({id:uid(),title:name,text:`Betrag: ${fmt(amt)} · Fällig: ${fdd(due)} · ${cat}${rechNr?' · Re-Nr: '+rechNr:''}`,date:TODAY});
+  if(dests.includes('dok'))
+    S.dok.push(dokEntry);
+
   save();
   closeScanner();
-  goTab('rech',document.getElementById('nb-rech'));
-  renderRech();
+  // Zur ersten gewählten Rubrik navigieren
+  const firstNav={rech:'nb-rech',todos:'nb-todo',fin:'nb-fin',kal:'nb-kal',media:'nb-media',notizen:'nb-media',dok:'nb-dok'};
+  const first=dests[0];
+  goTab(first==='notizen'?'media':first, document.getElementById(firstNav[first]));
+}
+
+function renderDok(){
+  const el=document.getElementById('dok-list');
+  if(!S.dok.length){el.innerHTML='<div class="empty">Keine Unterlagen vorhanden.<br>Dokumente über Scannen hinzufügen.</div>';return;}
+  const sorted=[...S.dok].sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+  el.innerHTML=sorted.map(d=>`
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--b1)">
+      ${d.scanImg?`<img src="${d.scanImg}" onclick="viewImg('${d.scanImg.replace(/'/g,"\\'")}') " style="width:52px;height:66px;object-fit:cover;border-radius:7px;border:1px solid var(--b2);flex-shrink:0;cursor:pointer">`:'<div style="width:52px;height:66px;background:var(--bg3);border-radius:7px;border:1px solid var(--b2);flex-shrink:0"></div>'}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name}</div>
+        <div style="font-size:12px;color:var(--t3);margin-bottom:2px">${d.cat}${d.amt?` · ${fmt(d.amt)}`:''}</div>
+        ${d.due?`<div style="font-size:12px;color:var(--t3)">Fällig: ${fdd(d.due)}</div>`:''}
+        ${d.rechNr?`<div style="font-size:11px;color:var(--t3)">Re-Nr: ${d.rechNr}</div>`:''}
+        <div style="font-size:11px;color:var(--t3)">Gespeichert: ${fdd(d.savedAt)}</div>
+      </div>
+      <button class="ibtn" onclick="S.dok=S.dok.filter(x=>x.id!=='${d.id}');save();renderDok()" style="flex-shrink:0">🗑</button>
+    </div>`).join('');
 }
 
 // ── INIT ──────────────────────────────────────────────
