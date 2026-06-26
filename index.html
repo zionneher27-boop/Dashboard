@@ -1169,6 +1169,35 @@ function resetScanner(){
   scanImageB64='';
 }
 
+// Bild zu Graustufen + Kontrast-Optimierung für besseres OCR
+function preprocessForOCR(file){
+  return new Promise(resolve=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{
+      // Hochauflösend für OCR (max 2000px)
+      const scale=Math.min(1,2000/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');
+      c.width=img.width*scale; c.height=img.height*scale;
+      const ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0,c.width,c.height);
+      // Pixel verarbeiten: Graustufen + Kontrast
+      const d=ctx.getImageData(0,0,c.width,c.height);
+      const px=d.data;
+      for(let i=0;i<px.length;i+=4){
+        // Graustufen (Luminanz-gewichtet)
+        const g=0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+        // Kontrast erhöhen (S-Kurve)
+        const c2=Math.min(255,Math.max(0,((g-128)*1.4)+128));
+        px[i]=px[i+1]=px[i+2]=c2;
+      }
+      ctx.putImageData(d,0,0);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.src=url;
+  });
+}
+
 function compressImage(file,maxW,quality){
   return new Promise(resolve=>{
     const img=new Image(),url=URL.createObjectURL(file);
@@ -1190,137 +1219,224 @@ async function handleScanFile(input){
   document.getElementById('scan-step-photo').style.display='none';
   document.getElementById('scan-step-loading').style.display='block';
   document.getElementById('scan-bar').style.width='5%';
-  document.getElementById('scan-status').textContent='Bild wird verarbeitet...';
+  document.getElementById('scan-status').textContent='Bild wird optimiert...';
+  document.getElementById('scan-substatus').textContent='Kontrast & Schärfe';
+
+  const [b64full, b64ocr] = await Promise.all([
+    compressImage(file,1200,0.85),
+    preprocessForOCR(file)
+  ]);
+  scanImageB64=b64full;
+  document.getElementById('scan-preview').src=b64full;
+  document.getElementById('scan-bar').style.width='15%';
+  document.getElementById('scan-status').textContent='Text wird gelesen...';
   document.getElementById('scan-substatus').textContent='';
 
-  // Vorschau & komprimiertes Bild speichern
-  const b64full=await compressImage(file,1200,0.85);
-  const b64thumb=await compressImage(file,600,0.7);
-  scanImageB64=b64full;
-  document.getElementById('scan-preview').src=b64thumb;
-
-  document.getElementById('scan-status').textContent='Text wird erkannt...';
-  document.getElementById('scan-bar').style.width='15%';
-
+  // OCR auf vorverarbeitetem Bild
+  const ocrBlob=await fetch(b64ocr).then(r=>r.blob());
   try{
-    const result=await Tesseract.recognize(file,'deu',{
+    const result=await Tesseract.recognize(ocrBlob,'deu',{
       logger:m=>{
         if(m.status==='recognizing text'){
           const p=15+Math.round(m.progress*80);
           document.getElementById('scan-bar').style.width=p+'%';
-          document.getElementById('scan-substatus').textContent=Math.round(m.progress*100)+'% gelesen';
-        } else {
+          document.getElementById('scan-substatus').textContent=Math.round(m.progress*100)+'%';
+        }else{
           document.getElementById('scan-substatus').textContent=m.status;
         }
       }
     });
     document.getElementById('scan-bar').style.width='100%';
-    document.getElementById('scan-status').textContent='Analyse läuft...';
-    document.getElementById('scan-substatus').textContent='Daten werden extrahiert';
-    setTimeout(()=>parseScanResult(result.data.text),500);
+    document.getElementById('scan-status').textContent='Daten werden extrahiert...';
+    setTimeout(()=>parseScanResult(result.data.text),300);
   }catch(e){
     document.getElementById('scan-status').textContent='Fehler — bitte nochmal versuchen';
     document.getElementById('scan-substatus').textContent=e.message||'';
   }
 }
 
+// ─── INTELLIGENTES PARSING ────────────────────────────
+
+function normOCR(t){
+  // Häufige OCR-Fehler korrigieren
+  return t.replace(/[oO](?=\d)/g,'0').replace(/[lI](?=\d)/g,'1')
+    .replace(/\bEUR\b/gi,'€').replace(/\bEuro\b/gi,'€');
+}
+
+function allAmounts(text){
+  // Alle Geldbeträge finden
+  const re=/(\d{1,4}(?:[.,]\d{3})*[.,]\d{2})\s*[€E]?/g;
+  const results=[];
+  let m;
+  while((m=re.exec(text))!==null){
+    const raw=m[1].replace(/\./g,'').replace(',','.');
+    const v=parseFloat(raw);
+    if(v>=0.5&&v<100000) results.push({v,idx:m.index,raw:m[1]});
+  }
+  return results;
+}
+
 function extractBetrag(text){
-  // Priorität: Schlüsselwörter für Gesamtbetrag
-  const patterns=[
-    /(?:Gesamtbetrag|Rechnungsbetrag|Zahlbetrag|Endbetrag|Gesamt|Total|Betrag|zu zahlen|fällig)[^\d€]*(\d{1,5}[.,]\d{2})\s*€?/i,
-    /€\s*(\d{1,5}[.,]\d{2})/,
-    /(\d{1,5}[.,]\d{2})\s*€/,
-  ];
-  for(const p of patterns){
-    const m=text.match(p);
-    if(m){const v=parseFloat(m[1].replace(',','.'));if(v>0&&v<99999)return v;}
+  const t=normOCR(text);
+  const lines=t.split('\n');
+
+  // Strategie 1: Zeile mit Schlüsselwort + Betrag
+  const keyRe=/gesamtbetrag|rechnungsbetrag|zahlbetrag|endbetrag|zu zahlen|offener betrag|forderungsbetrag|bitte zahlen|zahlungsbetrag|total|summe|betrag fällig/i;
+  for(const line of lines){
+    if(keyRe.test(line)){
+      const ams=allAmounts(line);
+      if(ams.length) return ams[ams.length-1].v; // letzter Betrag in der Zeile
+    }
+  }
+
+  // Strategie 2: Zeile mit € direkt nach Schlüsselwort (nächste Zeile)
+  for(let i=0;i<lines.length;i++){
+    if(keyRe.test(lines[i])){
+      const next=(lines[i+1]||'');
+      const ams=allAmounts(next);
+      if(ams.length) return ams[0].v;
+    }
+  }
+
+  // Strategie 3: Größten Betrag im Text nehmen (meist die Gesamtsumme)
+  const all=allAmounts(t);
+  if(all.length){
+    // Bevorzuge Betrag der nahe an € oder "EUR" steht
+    const withEur=all.filter(a=>t.substring(a.idx,a.idx+a.raw.length+3).includes('€')||t.substring(a.idx,a.idx+a.raw.length+4).includes('EUR'));
+    const pool=withEur.length?withEur:all;
+    return pool.reduce((max,a)=>a.v>max.v?a:max,pool[0]).v;
   }
   return 0;
 }
 
+function allDates(text){
+  const results=[];
+  // TT.MM.JJJJ oder TT.MM.JJ
+  const re=/(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/g;
+  let m;
+  while((m=re.exec(text))!==null){
+    const d=parseInt(m[1]),mo=parseInt(m[2]);
+    let y=parseInt(m[3]);
+    if(m[3].length===2)y+=2000;
+    if(mo>=1&&mo<=12&&d>=1&&d<=31&&y>=2020&&y<=2035)
+      results.push({iso:`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`,idx:m.index,y,mo,d});
+  }
+  return results;
+}
+
 function extractDatum(text){
-  // Fälligkeitsdatum Priorität
-  const fPat=[
-    /(?:fällig|Zahlungsziel|Zahlen bis|bitte bis|bis spätestens|bis zum)[^\d]*(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2,4})/i,
-    /(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{4})/,
-    /(\d{1,2})[.\-\/](\d{1,2})[.\-\/](\d{2})/,
-  ];
-  for(const p of fPat){
-    const m=text.match(p);
-    if(m){
-      const d=m[1].padStart(2,'0'),mo=m[2].padStart(2,'0');
-      const y=m[3].length===2?'20'+m[3]:m[3];
-      if(parseInt(mo)>=1&&parseInt(mo)<=12&&parseInt(d)>=1&&parseInt(d)<=31)
-        return`${y}-${mo}-${d}`;
+  const t=normOCR(text);
+  const lines=t.split('\n');
+
+  // Schlüsselwörter für Fälligkeitsdatum
+  const dueKey=/fällig|zahlungsziel|zahlen bis|bitte bis|bis spätestens|bis zum|zahlbar|due date|payment due|zu zahlen bis/i;
+
+  // Strategie 1: Zeile mit Fälligkeits-Keyword
+  for(const line of lines){
+    if(dueKey.test(line)){
+      const dates=allDates(line);
+      if(dates.length) return dates[0].iso;
     }
+  }
+  // Strategie 2: Nächste Zeile nach Keyword
+  for(let i=0;i<lines.length;i++){
+    if(dueKey.test(lines[i])){
+      const dates=allDates(lines[i+1]||'');
+      if(dates.length) return dates[0].iso;
+    }
+  }
+
+  // Strategie 3: Spätestes Datum = wahrscheinlich Fälligkeit
+  const all=allDates(t);
+  if(all.length){
+    return all.reduce((latest,d)=>d.iso>latest.iso?d:latest,all[0]).iso;
   }
   return '';
 }
 
 function extractAbsender(text){
-  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
-  const skip=/^(datum|betrag|seite|iban|bic|rechnung|nr\.|re-|konto|von|an|str\.|str |straße|plz|\d)/i;
-  // Erste sinnvolle Zeile die kein Datum/Zahl ist
-  for(const l of lines.slice(0,15)){
-    if(!skip.test(l)&&l.length>4&&l.length<60&&!/^\d{4,}/.test(l))return l;
+  const lines=text.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+
+  // Firmenname erkennen: GmbH, AG, KG, UG, e.V., SE, OHG etc.
+  for(const l of lines){
+    if(/GmbH|AG\b|KG\b|UG\b|e\.V\.|SE\b|OHG\b|Ltd\.|GbR/i.test(l)&&l.length<80)
+      return l.replace(/\s{2,}/g,' ').trim();
+  }
+
+  // Erste nicht-numerische, nicht-adress-artige Zeile
+  const skip=/^(datum|betrag|seite|iban|bic|rechnung|nr\.|re[-\s]|konto|str\.|straße|plz|postfach|telefon|fax|email|web|www|http|\d{4,})/i;
+  for(const l of lines.slice(0,20)){
+    if(!skip.test(l)&&l.length>=4&&l.length<=70&&!/^\d/.test(l)&&/[a-zäöü]/i.test(l))
+      return l.replace(/\s{2,}/g,' ').trim();
   }
   return lines[0]||'Unbekannt';
 }
 
 function extractRechNr(text){
-  const m=text.match(/(?:Rechnung(?:s)?(?:nummer|nr\.?|nummer)?|RE-?|Invoice\s*(?:No\.?|Nr\.?))\s*[:\-#]?\s*([A-Z0-9\-\/]{3,20})/i);
-  return m?m[1].trim():'';
+  const patterns=[
+    /(?:Rechnungs?(?:nummer|[-\s]?nr\.?)|Re(?:chnungs)?[-.\s]?Nr\.?|Invoice\s*(?:No\.?|Nr\.?)|Belegnummer|Auftragsnr\.?)\s*[:\-#\s]?\s*([A-Z0-9][\w\-\/]{2,24})/i,
+    /\bRE[-\/]?\s*(\d{3,12})\b/,
+    /\bR\s*(\d{5,12})\b/,
+  ];
+  for(const p of patterns){
+    const m=text.match(p);
+    if(m&&m[1]&&m[1].length<=25)return m[1].trim();
+  }
+  return '';
 }
 
 function extractKat(text){
   const t=text.toLowerCase();
-  if(/strom|energie|eon|enewa|vattenfall|e\.on/i.test(t))return'Strom';
-  if(/gas|heizung|stadtwerk/i.test(t))return'Gas';
-  if(/telekom|vodafone|o2|1&1|internet|mobilfunk|telefon|magenta/i.test(t))return'Telefon';
-  if(/krankenkasse|krankenversicherung|aok|techniker|tk |barmer|dak|ikk/i.test(t))return'Krankenversicherung';
-  if(/versicherung|allianz|huk|axa|generali|zurich|signal|ergo/i.test(t))return'Versicherung';
-  if(/miete|hausverwaltung|nebenkosten|wohnung/i.test(t))return'Miete';
-  if(/finanzamt|steuer|elster/i.test(t))return'Steuern';
-  if(/mahnung|forderung|inkasso/i.test(t))return'Mahnung';
-  if(/wasser|abwasser/i.test(t))return'Wasser';
-  if(/müll|abfall|entsorgung/i.test(t))return'Abfall';
-  if(/kfz|auto|fahrzeug|kfz-steuer/i.test(t))return'KFZ';
-  if(/arzt|zahnarzt|apotheke|klinik|krankenhaus/i.test(t))return'Gesundheit';
+  if(/strom|energie|eon\b|enewa|vattenfall|yello|e\.on|grundversorger/i.test(t))return'Strom';
+  if(/gas\b|erdgas|heizung|stadtwerk/i.test(t))return'Gas';
+  if(/telekom|vodafone|\bo2\b|1&1|eins&eins|internet|mobilfunk|telefon|magenta|sim-karte|router/i.test(t))return'Telefon';
+  if(/krankenkasse|krankenversicherung|aok\b|techniker krankenkasse|\btk\b|barmer|dak\b|ikk\b|bkk/i.test(t))return'Krankenversicherung';
+  if(/versicherung|allianz|huk|axa|generali|zurich|signal iduna|ergo\b|barmenia|alte leipziger/i.test(t))return'Versicherung';
+  if(/miete|hausverwaltung|nebenkosten|wohnungsbau|mietvertrag/i.test(t))return'Miete';
+  if(/finanzamt|steuer|elster|körperschaftsteuer|einkommensteuer|umsatzsteuer/i.test(t))return'Steuern';
+  if(/mahnung|forderung|inkasso|mahngebühr|verzug/i.test(t))return'Mahnung';
+  if(/wasser|abwasser|trinkwasser/i.test(t))return'Wasser';
+  if(/müll|abfall|entsorgung|abfallgebühr/i.test(t))return'Abfall';
+  if(/kfz|kraftfahrzeug|fahrzeug|kfz-steuer|hauptuntersuchung|tüv\b/i.test(t))return'KFZ';
+  if(/arzt|zahnarzt|apotheke|klinik|krankenhaus|praxis|rezept/i.test(t))return'Gesundheit';
+  if(/rundfunk|beitrag|ard|zdf\b|gez\b/i.test(t))return'Rundfunkbeitrag';
   return'Sonstiges';
 }
 
 function inp(id,label,val,type='text'){
   return`<div><div style="font-size:9px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">${label}</div>
-    <input id="${id}" type="${type}" value="${val}" style="width:100%;padding:9px 11px;background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:Barlow,sans-serif;outline:none"></div>`;
+    <input id="${id}" type="${type}" value="${(val+'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 11px;background:var(--bg3);border:1px solid var(--b2);border-radius:7px;color:var(--t1);font-size:13px;font-family:Barlow,sans-serif;outline:none"></div>`;
 }
 
-function parseScanResult(text){
+function parseScanResult(rawText){
   document.getElementById('scan-step-loading').style.display='none';
   document.getElementById('scan-step-result').style.display='block';
 
+  const text=normOCR(rawText);
   const name=extractAbsender(text);
   const amt=extractBetrag(text);
   const due=extractDatum(text);
   const cat=extractKat(text);
   const rechNr=extractRechNr(text);
 
+  // Sicherheit: zeige wie viel Text erkannt wurde
+  const wordCount=rawText.trim().split(/\s+/).length;
+  const quality=wordCount<20?'⚠ Wenig Text erkannt — Foto schärfer machen':wordCount<50?'OK':'Gut';
+
   const el=document.getElementById('scan-results');
   el.innerHTML=`
-    <!-- Vorschau -->
     <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px">
-      <img src="${scanImageB64}" style="width:72px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--b2);flex-shrink:0;cursor:pointer" onclick="viewImg('${scanImageB64}')">
-      <div style="font-size:11px;color:var(--t3);line-height:1.6">
-        <div style="color:var(--t2);font-weight:700;font-size:12px;margin-bottom:4px">Automatisch erkannt</div>
-        ${amt>0?`<div>Betrag: <b style="color:var(--t1)">${fmt(amt)}</b></div>`:''}
-        ${due?`<div>Fällig: <b style="color:var(--t1)">${fdd(due)}</b></div>`:''}
-        ${rechNr?`<div>Nr.: <b style="color:var(--t1)">${rechNr}</b></div>`:''}
-        <div>Kat.: <b style="color:var(--t1)">${cat}</b></div>
+      <img src="${scanImageB64}" style="width:64px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--b2);flex-shrink:0;cursor:pointer" onclick="viewImg('${scanImageB64.replace(/'/g,'"')}')">
+      <div style="font-size:11px;color:var(--t3);line-height:1.7;flex:1">
+        <div style="color:var(--t2);font-weight:700;font-size:12px;margin-bottom:4px">Erkannt (${wordCount} Wörter · ${quality})</div>
+        ${amt>0?`<div>Betrag: <b style="color:var(--neon)">${fmt(amt)}</b></div>`:'<div style="color:var(--red)">Betrag: nicht erkannt</div>'}
+        ${due?`<div>Fällig: <b style="color:var(--t1)">${fdd(due)}</b></div>`:'<div style="color:var(--red)">Fällig: nicht erkannt</div>'}
+        ${rechNr?`<div>Re.-Nr.: <b style="color:var(--t1)">${rechNr}</b></div>`:''}
       </div>
     </div>
 
-    <!-- Felder -->
     <div style="display:grid;gap:8px;margin-bottom:12px">
-      ${inp('sc-name','Absender / Name',name.replace(/"/g,'&quot;').substring(0,50))}
+      ${inp('sc-name','Absender / Schuldner',name.substring(0,60))}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${inp('sc-amt','Betrag (€)',amt||'','number')}
         ${inp('sc-due','Fällig am',due,'date')}
@@ -1333,8 +1449,9 @@ function parseScanResult(text){
 
     <button onclick="saveScan()" style="width:100%;padding:13px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer;letter-spacing:.5px">In Fristen speichern</button>
 
-    <details style="margin-top:10px"><summary style="font-size:11px;color:var(--t3);cursor:pointer">Erkannter Rohtext</summary>
-      <div style="font-size:10px;color:var(--t3);background:var(--bg2);padding:10px;border-radius:8px;margin-top:6px;white-space:pre-wrap;max-height:100px;overflow-y:auto;line-height:1.5">${text.replace(/</g,'&lt;').substring(0,800)}</div>
+    <details style="margin-top:10px">
+      <summary style="font-size:11px;color:var(--t3);cursor:pointer;padding:4px 0">Erkannter Rohtext (${wordCount} Wörter)</summary>
+      <div style="font-size:10px;color:var(--t3);background:var(--bg2);padding:10px;border-radius:8px;margin-top:6px;white-space:pre-wrap;max-height:150px;overflow-y:auto;line-height:1.6;user-select:text">${rawText.replace(/</g,'&lt;').substring(0,1200)}</div>
     </details>`;
 }
 
