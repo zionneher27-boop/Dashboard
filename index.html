@@ -1465,12 +1465,13 @@ function parseScanResult(rawText){
       <div style="font-size:10px;color:var(--t3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ablageort wählen</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="scan-dest-grid">
         ${[['rech','Fristen','📄'],['todos','Todos','✓'],['fin','Finanzen','€'],['kal','Kalender','📅'],['media','Medien','🖼'],['notizen','Notizen','📝'],['dok','Unterlagen','🗂']].map(([k,label,icon])=>`
-        <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border:1.5px solid var(--b2);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s" id="dest-wrap-${k}" onclick="toggleDest('${k}')">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg2);border:1.5px solid var(--b2);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600" id="dest-wrap-${k}" onclick="toggleDest('${k}')">
           <input type="checkbox" id="dest-${k}" style="display:none">
           <span id="dest-check-${k}" style="width:18px;height:18px;border:2px solid var(--t3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px"></span>
           <span>${icon} ${label}</span>
-        </label>`).join('')}
+        </div>`).join('')}
       </div>
+      <div id="scan-dest-msg" style="display:none;color:var(--red);font-size:12px;margin-top:6px"></div>
     </div>
 
     <button onclick="saveScan()" style="width:100%;padding:13px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer;letter-spacing:.5px">Speichern</button>
@@ -1479,6 +1480,8 @@ function parseScanResult(rawText){
       <summary style="font-size:11px;color:var(--t3);cursor:pointer;padding:4px 0">Erkannter Rohtext (${wordCount} Wörter)</summary>
       <div style="font-size:10px;color:var(--t3);background:var(--bg2);padding:10px;border-radius:8px;margin-top:6px;white-space:pre-wrap;max-height:150px;overflow-y:auto;line-height:1.6;user-select:text">${rawText.replace(/</g,'&lt;').substring(0,1200)}</div>
     </details>`;
+  // Unterlagen standardmäßig vorausgewählt
+  setTimeout(()=>toggleDest('dok'),50);
 }
 
 function toggleDest(key){
@@ -1503,8 +1506,13 @@ function toggleDest(key){
 }
 
 function saveScan(){
-  const dests=['rech','todos','fin','kal','media','notizen','dok'].filter(k=>document.getElementById('dest-'+k)?.checked);
-  if(!dests.length){alert('Bitte mindestens einen Ablageort auswählen.');return;}
+  const allKeys=['rech','todos','fin','kal','media','notizen','dok'];
+  const dests=allKeys.filter(k=>{const el=document.getElementById('dest-'+k);return el&&el.checked;});
+  if(!dests.length){
+    const msg=document.getElementById('scan-dest-msg');
+    if(msg){msg.textContent='⚠ Bitte mindestens einen Ablageort auswählen';msg.style.display='block';}
+    return;
+  }
 
   const name=document.getElementById('sc-name').value.trim()||'Unbekannt';
   const amt=parseFloat(document.getElementById('sc-amt').value)||0;
