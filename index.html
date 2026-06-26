@@ -438,13 +438,13 @@ body{font-family:'Barlow',sans-serif;font-weight:500;color:var(--t1);background:
       <div id="voice-anim" style="width:64px;height:64px;border-radius:50%;background:var(--bg2);border:2px solid var(--b2);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </div>
-      <div id="voice-status" style="font-size:13px;color:var(--t2);margin-bottom:8px">Drücke Start und sprich</div>
-      <div id="voice-transcript" style="font-size:15px;font-weight:600;color:var(--t1);min-height:24px;padding:0 8px;line-height:1.4"></div>
-      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
-        <button id="voice-start-btn" onclick="startListening()" style="padding:10px 20px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:13px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">Start</button>
-        <button onclick="stopListening()" style="padding:10px 20px;background:var(--bg3);color:var(--t2);border:1px solid var(--b2);border-radius:8px;font-size:13px;font-weight:700;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">Stop</button>
+      <div id="voice-status" style="font-size:13px;color:var(--t2);margin-bottom:8px">Tippe Start, sprich, dann Fertig</div>
+      <div id="voice-transcript" style="font-size:15px;font-weight:600;color:var(--t1);min-height:28px;padding:8px;background:var(--bg2);border-radius:8px;margin:0 0 12px;line-height:1.4;text-align:left"></div>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button id="voice-start-btn" onclick="startListening()" style="flex:1;padding:12px;background:var(--t1);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">🎙 Start</button>
+        <button id="voice-done-btn" onclick="finishListening()" style="flex:1;padding:12px;background:var(--bg3);color:var(--t2);border:1px solid var(--b2);border-radius:8px;font-size:14px;font-weight:800;font-family:Barlow,sans-serif;text-transform:uppercase;cursor:pointer">✓ Fertig</button>
       </div>
-      <div style="margin-top:12px;font-size:11px;color:var(--t3)">Beispiel: "Zahnarzt Termin am 15. Juli 10 Uhr" · "Telekom Rechnung 39 Euro fällig 20. Juli" · "Aufgabe Steuern bis Ende Monat"</div>
+      <div style="margin-top:10px;font-size:11px;color:var(--t3);line-height:1.6">Beispiel: "Zahnarzt Termin 15. Juli 10 Uhr"<br>"Telekom Rechnung 39 Euro fällig 20. Juli"<br>"Aufgabe Steuern bis Ende Monat"</div>
     </div>
     <div id="voice-result" style="display:none">
       <div style="font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:10px">Erkannt & eingeordnet:</div>
@@ -939,96 +939,105 @@ function setVoiceBtnIdle(){
   b.style.background='var(--bg2)';b.style.borderColor='var(--b2)';b.style.color='var(--t2)';
 }
 
+let voiceFinalText='';
+let voicePulseInt=null;
+let voiceTimeout=null;
+
 function startListening(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){
-    document.getElementById('voice-status').textContent='Nicht unterstützt — bitte Safari verwenden';
+    document.getElementById('voice-status').textContent='Nicht unterstützt — bitte Safari nutzen';
     return;
   }
   if(recognition){try{recognition.abort();}catch(e){} recognition=null;}
+  voiceFinalText='';
+  clearInterval(voicePulseInt);
+  clearTimeout(voiceTimeout);
 
   recognition=new SR();
   recognition.lang='de-DE';
-  recognition.interimResults=false; // iOS braucht false
-  recognition.continuous=false;     // iOS: kein continuous mode
-  recognition.maxAlternatives=3;
+  recognition.interimResults=false;
+  recognition.continuous=false;
+  recognition.maxAlternatives=1;
 
-  let finalText='';
+  const statusEl=document.getElementById('voice-status');
+  const transEl=document.getElementById('voice-transcript');
+  const startBtn=document.getElementById('voice-start-btn');
+  const doneBtn=document.getElementById('voice-done-btn');
 
-  document.getElementById('voice-status').textContent='Sprich jetzt...';
-  document.getElementById('voice-transcript').textContent='';
-  document.getElementById('voice-anim').style.background='var(--bg3)';
+  statusEl.textContent='Sprich jetzt...';
+  transEl.textContent='';
+  startBtn.disabled=true;
+  startBtn.textContent='Hört zu...';
+  doneBtn.style.background='var(--t1)';
+  doneBtn.style.color='#000';
   document.getElementById('voice-anim').style.border='2px solid var(--t1)';
-  document.getElementById('voice-start-btn').textContent='Hört zu...';
-  document.getElementById('voice-start-btn').disabled=true;
-  setVoiceBtnActive();
 
-  // Puls-Animation
-  let pulse=0;
-  const pulseInt=setInterval(()=>{
-    pulse=(pulse+1)%4;
-    document.getElementById('voice-status').textContent='Sprich jetzt'+'...'.slice(0,pulse);
-  },400);
+  let dots=0;
+  voicePulseInt=setInterval(()=>{dots=(dots+1)%4;statusEl.textContent='Sprich jetzt'+'.'.repeat(dots);},500);
 
   recognition.onresult=e=>{
-    clearInterval(pulseInt);
-    for(let i=0;i<e.results.length;i++){
-      if(e.results[i].isFinal||e.results[i][0].transcript)
-        finalText+=e.results[i][0].transcript+' ';
-    }
-    finalText=finalText.trim();
-    document.getElementById('voice-transcript').textContent=finalText;
-    document.getElementById('voice-status').textContent='Erkannt — wird verarbeitet...';
-  };
-
-  recognition.onnomatch=()=>{
-    clearInterval(pulseInt);
-    document.getElementById('voice-status').textContent='Nichts verstanden — nochmal versuchen';
-    resetVoiceBtn();
-  };
-
-  recognition.onend=()=>{
-    clearInterval(pulseInt);
-    resetVoiceBtn();
-    const text=(finalText||document.getElementById('voice-transcript').textContent).trim();
-    if(text.length>2){
-      parseVoice(text);
-    } else {
-      document.getElementById('voice-status').textContent='Nichts erkannt — nochmal tippen';
-    }
+    clearInterval(voicePulseInt);
+    let t='';
+    for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript+' ';
+    voiceFinalText=t.trim();
+    transEl.textContent=voiceFinalText;
+    statusEl.textContent='Erkannt ✓ — drücke Fertig';
   };
 
   recognition.onerror=e=>{
-    clearInterval(pulseInt);
-    resetVoiceBtn();
+    clearInterval(voicePulseInt);
+    clearTimeout(voiceTimeout);
     const msgs={
-      'not-allowed':'Mikrofon-Zugriff verweigert — in Safari-Einstellungen erlauben',
-      'no-speech':'Keine Sprache erkannt — nochmal versuchen',
-      'network':'Kein Internet — Verbindung prüfen',
+      'not-allowed':'Mikrofon blockiert — Einstellungen › Safari › Mikrofon › erlauben',
+      'no-speech':'Nichts gehört — nochmal versuchen',
+      'network':'Kein Internet',
       'audio-capture':'Kein Mikrofon gefunden',
     };
-    document.getElementById('voice-status').textContent=msgs[e.error]||('Fehler: '+e.error);
+    statusEl.textContent=msgs[e.error]||'Fehler: '+e.error;
+    resetVoiceBtn();
   };
 
-  try{recognition.start();}
-  catch(e){
-    clearInterval(pulseInt);
+  // onend auf iOS feuert oft sofort ohne Ergebnis — ignorieren, User drückt Fertig
+  recognition.onend=()=>{
+    clearInterval(voicePulseInt);
+    if(!voiceFinalText) statusEl.textContent='Sprich — dann Fertig drücken';
     resetVoiceBtn();
-    document.getElementById('voice-status').textContent='Fehler beim Starten — Seite neu laden';
+  };
+
+  try{
+    recognition.start();
+    voiceTimeout=setTimeout(()=>finishListening(),15000);
+  }catch(e){
+    clearInterval(voicePulseInt);
+    resetVoiceBtn();
+    statusEl.textContent='Fehler — Seite neu laden';
+  }
+}
+
+function finishListening(){
+  clearInterval(voicePulseInt);
+  clearTimeout(voiceTimeout);
+  if(recognition){try{recognition.stop();}catch(e){}}
+  resetVoiceBtn();
+  const text=(voiceFinalText||document.getElementById('voice-transcript').textContent).trim();
+  if(text.length>1){
+    parseVoice(text);
+  } else {
+    document.getElementById('voice-status').textContent='Nichts erkannt — Start drücken und sprechen';
   }
 }
 
 function resetVoiceBtn(){
   setVoiceBtnIdle();
-  document.getElementById('voice-anim').style.border='2px solid var(--b2)';
-  document.getElementById('voice-anim').style.background='var(--bg2)';
   const btn=document.getElementById('voice-start-btn');
-  btn.textContent='Start';btn.disabled=false;
+  const done=document.getElementById('voice-done-btn');
+  btn.textContent='🎙 Start'; btn.disabled=false;
+  done.style.background='var(--bg3)'; done.style.color='var(--t2)';
+  document.getElementById('voice-anim').style.border='2px solid var(--b2)';
 }
 
-function stopListening(){
-  if(recognition){try{recognition.stop();}catch(e){}}
-}
+function stopListening(){finishListening();}
 
 const MONTHS={januar:'01',februar:'02',märz:'03',april:'04',mai:'05',juni:'06',juli:'07',august:'08',september:'09',oktober:'10',november:'11',dezember:'12'};
 function parseDate(text){
